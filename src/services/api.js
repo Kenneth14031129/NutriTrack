@@ -1,0 +1,139 @@
+const API_BASE_URL = 'http://localhost:5000/api';
+
+class ApiService {
+  constructor() {
+    this.token = localStorage.getItem('authToken');
+  }
+
+  // Helper method to get headers
+  getHeaders() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+    
+    return headers;
+  }
+
+  // Helper method to handle responses
+  async handleResponse(response) {
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'API request failed');
+    }
+    return response.json();
+  }
+
+  // Authentication
+  async register(userData) {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(userData)
+    });
+    
+    const data = await this.handleResponse(response);
+    if (data.token) {
+      this.token = data.token;
+      localStorage.setItem('authToken', data.token);
+    }
+    return data;
+  }
+
+  async login(credentials) {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(credentials)
+    });
+    
+    const data = await this.handleResponse(response);
+    if (data.token) {
+      this.token = data.token;
+      localStorage.setItem('authToken', data.token);
+    }
+    return data;
+  }
+
+  logout() {
+    this.token = null;
+    localStorage.removeItem('authToken');
+  }
+
+  // Goals
+  async createGoals(goalsData) {
+    const response = await fetch(`${API_BASE_URL}/goals`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(goalsData)
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getCurrentGoals() {
+    const response = await fetch(`${API_BASE_URL}/goals/current`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async updateGoals(goalId, goalsData) {
+    const response = await fetch(`${API_BASE_URL}/goals/${goalId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(goalsData)
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  // Progress
+  async getTodayProgress() {
+    const response = await fetch(`${API_BASE_URL}/progress/today`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async updateProgress(type, value, operation = 'add') {
+    const response = await fetch(`${API_BASE_URL}/progress/update/${type}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ value, operation })
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async addActivity(activityData) {
+    const response = await fetch(`${API_BASE_URL}/progress/activity`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(activityData)
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  // User Dashboard
+  async getDashboard() {
+    const response = await fetch(`${API_BASE_URL}/users/dashboard`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    return !!this.token;
+  }
+}
+
+export default new ApiService();

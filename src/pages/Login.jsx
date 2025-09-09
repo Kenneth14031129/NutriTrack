@@ -74,7 +74,7 @@ const Login = () => {
     setTimeout(() => {
       setIsLoading(false);
       console.log(`${isSignUp ? "Signup" : "Login"} attempted with:`, formData);
-      navigate("/food-search");
+      navigate("/ai-coach");
     }, 2000);
   };
 
