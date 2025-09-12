@@ -226,6 +226,45 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Scanner
+  async scanBarcode(barcode) {
+    const response = await fetch(`${API_BASE_URL}/scanner/barcode`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ barcode })
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async scanText(text) {
+    const response = await fetch(`${API_BASE_URL}/scanner/text`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ text })
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async scanImage(imageData) {
+    const response = await fetch(`${API_BASE_URL}/scanner/text`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ image: imageData })
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getRecentScans() {
+    const response = await fetch(`${API_BASE_URL}/scanner/recent`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
   // Check if user is authenticated
   isAuthenticated() {
     return !!this.token;

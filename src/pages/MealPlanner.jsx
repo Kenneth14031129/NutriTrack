@@ -13,22 +13,20 @@ import apiService from "../services/api";
 
 const MealPlanner = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [view, setView] = useState("week"); // week, day
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plannedMeals, setPlannedMeals] = useState({});
   const [, setLoading] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [selectedDayForModal, setSelectedDayForModal] = useState(null);
   const [mealForm, setMealForm] = useState({
     name: "",
     type: "breakfast",
     plannedTime: "08:00",
-    foods: [],
     notes: "",
+    calories: "",
+    protein: "",
   });
-  const [showFoodSearch, setShowFoodSearch] = useState(false);
-  const [foodSearchQuery, setFoodSearchQuery] = useState("");
-  const [searchedFoods, setSearchedFoods] = useState([]);
-  const [loadingFoods, setLoadingFoods] = useState(false);
 
   const mealTypes = [
     { id: "breakfast", label: "Breakfast", icon: "🌅", time: "8:00 AM" },
@@ -113,7 +111,6 @@ const MealPlanner = () => {
       const mealData = {
         ...mealForm,
         date: selectedDate.toISOString().split("T")[0],
-        foods: mealForm.foods || [],
       };
 
       if (apiService.isAuthenticated()) {
@@ -126,7 +123,14 @@ const MealPlanner = () => {
         const newMeal = {
           _id: Date.now().toString(),
           ...mealData,
-          totalNutrition: { calories: 300, protein: 15, carbs: 25, fat: 12 },
+          calories: parseFloat(mealForm.calories) || 0,
+          protein: parseFloat(mealForm.protein) || 0,
+          totalNutrition: { 
+            calories: parseFloat(mealForm.calories) || 0, 
+            protein: parseFloat(mealForm.protein) || 0, 
+            carbs: 25, 
+            fat: 12 
+          },
           status: "planned",
         };
 
@@ -152,8 +156,9 @@ const MealPlanner = () => {
         name: "",
         type: "breakfast",
         plannedTime: "08:00",
-        foods: [],
         notes: "",
+        calories: "",
+        protein: "",
       });
       setShowMealModal(false);
     } catch (error) {
@@ -202,154 +207,6 @@ const MealPlanner = () => {
     }
   };
 
-  // Search foods
-  const searchFoods = async (query) => {
-    if (!query.trim()) {
-      setSearchedFoods([]);
-      return;
-    }
-
-    setLoadingFoods(true);
-    try {
-      if (apiService.isAuthenticated()) {
-        const response = await apiService.searchFoods(query, { limit: 10 });
-        setSearchedFoods(response.foods || []);
-      } else {
-        // Sample foods for demo
-        const sampleFoods = [
-          {
-            _id: "1",
-            name: "Chicken Breast",
-            nutrition: {
-              calories: 165,
-              protein: 31,
-              carbs: 0,
-              fat: 3.6,
-              servingSize: 100,
-              servingUnit: "g",
-            },
-          },
-          {
-            _id: "2",
-            name: "Brown Rice",
-            nutrition: {
-              calories: 123,
-              protein: 2.6,
-              carbs: 23,
-              fat: 0.9,
-              servingSize: 100,
-              servingUnit: "g",
-            },
-          },
-          {
-            _id: "3",
-            name: "Broccoli",
-            nutrition: {
-              calories: 34,
-              protein: 2.8,
-              carbs: 7,
-              fat: 0.4,
-              servingSize: 100,
-              servingUnit: "g",
-            },
-          },
-          {
-            _id: "4",
-            name: "Salmon",
-            nutrition: {
-              calories: 208,
-              protein: 22,
-              carbs: 0,
-              fat: 13,
-              servingSize: 100,
-              servingUnit: "g",
-            },
-          },
-          {
-            _id: "5",
-            name: "Avocado",
-            nutrition: {
-              calories: 160,
-              protein: 2,
-              carbs: 9,
-              fat: 15,
-              servingSize: 100,
-              servingUnit: "g",
-            },
-          },
-        ].filter((food) =>
-          food.name.toLowerCase().includes(query.toLowerCase())
-        );
-        setSearchedFoods(sampleFoods);
-      }
-    } catch (error) {
-      console.error("Error searching foods:", error);
-      setSearchedFoods([]);
-    } finally {
-      setLoadingFoods(false);
-    }
-  };
-
-  // Add food to meal
-  const addFoodToMeal = (food, quantity = 100) => {
-    const newFood = {
-      foodId: food._id,
-      name: food.name,
-      quantity: quantity,
-      unit: food.nutrition.servingUnit || "g",
-      calories: Math.round(
-        (food.nutrition.calories * quantity) / food.nutrition.servingSize
-      ),
-      nutrition: {
-        protein:
-          Math.round(
-            ((food.nutrition.protein * quantity) / food.nutrition.servingSize) *
-              10
-          ) / 10,
-        carbs:
-          Math.round(
-            ((food.nutrition.carbs * quantity) / food.nutrition.servingSize) *
-              10
-          ) / 10,
-        fat:
-          Math.round(
-            ((food.nutrition.fat * quantity) / food.nutrition.servingSize) * 10
-          ) / 10,
-      },
-    };
-
-    setMealForm((prev) => ({
-      ...prev,
-      foods: [...prev.foods, newFood],
-    }));
-    setShowFoodSearch(false);
-    setFoodSearchQuery("");
-    setSearchedFoods([]);
-  };
-
-  // Remove food from meal
-  const removeFoodFromMeal = (index) => {
-    setMealForm((prev) => ({
-      ...prev,
-      foods: prev.foods.filter((_, i) => i !== index),
-    }));
-  };
-
-  // Calculate meal totals
-  const calculateMealTotals = () => {
-    return mealForm.foods.reduce(
-      (totals, food) => ({
-        calories: totals.calories + (food.calories || 0),
-        protein:
-          Math.round((totals.protein + (food.nutrition?.protein || 0)) * 10) /
-          10,
-        carbs:
-          Math.round((totals.carbs + (food.nutrition?.carbs || 0)) * 10) / 10,
-        fat: Math.round((totals.fat + (food.nutrition?.fat || 0)) * 10) / 10,
-      }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
-    );
-  };
 
   const getDayTotals = (date) => {
     const meals = getMealsForDate(date);
@@ -374,7 +231,7 @@ const MealPlanner = () => {
   const weekDays = getWeekDays(selectedDate);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-900">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -382,56 +239,32 @@ const MealPlanner = () => {
       />
       <div className="flex flex-col flex-1 lg:ml-0">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-6 py-4">
+        <div className="bg-gray-900 text-white border-b border-gray-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 hover:bg-gray-800 rounded-lg transition-colors"
               >
-                <Menu className="w-6 h-6 text-gray-600" />
+                <Menu className="w-6 h-6 text-gray-300" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <ChefHat className="text-green-600" />
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <ChefHat className="text-green-500" />
                   Meal Planner
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-400 mt-1">
                   Plan your weekly meals and stay on track
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex bg-white rounded-lg shadow-sm border">
-                <button
-                  onClick={() => setView("week")}
-                  className={`px-4 py-2 rounded-l-lg font-medium ${
-                    view === "week"
-                      ? "bg-green-600 text-white"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  Week
-                </button>
-                <button
-                  onClick={() => setView("day")}
-                  className={`px-4 py-2 rounded-r-lg font-medium ${
-                    view === "day"
-                      ? "bg-green-600 text-white"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  Day
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
           {/* Week Navigation */}
-          <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+          <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 mb-6">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => {
@@ -439,12 +272,12 @@ const MealPlanner = () => {
                   newDate.setDate(newDate.getDate() - 7);
                   setSelectedDate(newDate);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-700 rounded-lg text-white transition-colors"
               >
                 ←
               </button>
 
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-xl font-semibold text-white">
                 {weekDays[0].toLocaleDateString("en-US", {
                   month: "long",
                   year: "numeric",
@@ -457,7 +290,7 @@ const MealPlanner = () => {
                   newDate.setDate(newDate.getDate() + 7);
                   setSelectedDate(newDate);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-700 rounded-lg text-white transition-colors"
               >
                 →
               </button>
@@ -465,8 +298,7 @@ const MealPlanner = () => {
           </div>
 
           {/* Week View */}
-          {view === "week" && (
-            <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-7 gap-4">
               {weekDays.map((day, index) => {
                 const meals = getMealsForDate(day);
                 const totals = getDayTotals(day);
@@ -476,19 +308,23 @@ const MealPlanner = () => {
                 return (
                   <div
                     key={index}
-                    className={`bg-white rounded-lg shadow-sm border p-4 ${
+                    onClick={() => {
+                      setSelectedDayForModal(day);
+                      setShowDayModal(true);
+                    }}
+                    className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 cursor-pointer hover:bg-gray-750 transition-colors ${
                       isToday ? "ring-2 ring-green-500" : ""
                     }`}
                   >
                     <div className="text-center mb-4">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-white">
                         {day.toLocaleDateString("en-US", { weekday: "short" })}
                       </div>
                       <div
                         className={`text-sm ${
                           isToday
-                            ? "text-green-600 font-medium"
-                            : "text-gray-500"
+                            ? "text-green-400 font-medium"
+                            : "text-gray-400"
                         }`}
                       >
                         {day.getDate()}
@@ -499,26 +335,29 @@ const MealPlanner = () => {
                       {mealTypes.map((mealType) => (
                         <div
                           key={mealType.id}
-                          className="border-b border-gray-100 last:border-b-0 pb-2"
+                          className="border-b border-gray-700 last:border-b-0 pb-2"
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <div className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                            <div className="text-xs font-medium text-gray-300 flex items-center gap-1">
                               <span>{mealType.icon}</span>
                               {mealType.label}
                             </div>
-                            <button
-                              onClick={() => {
-                                setSelectedDate(day);
-                                setMealForm((prev) => ({
-                                  ...prev,
-                                  type: mealType.id,
-                                }));
-                                setShowMealModal(true);
-                              }}
-                              className="text-green-600 hover:bg-green-50 p-1 rounded"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
+                            {day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedDate(day);
+                                  setMealForm((prev) => ({
+                                    ...prev,
+                                    type: mealType.id,
+                                  }));
+                                  setShowMealModal(true);
+                                }}
+                                className="text-green-400 hover:bg-green-500/20 p-1 rounded transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
 
                           <div className="space-y-1">
@@ -527,15 +366,15 @@ const MealPlanner = () => {
                                 key={meal._id || meal.id}
                                 className={`text-xs rounded p-2 flex items-center justify-between transition-colors ${
                                   meal.status === "consumed"
-                                    ? "bg-green-50 border border-green-200"
+                                    ? "bg-green-500/20 border border-green-500/30"
                                     : meal.status === "prepared"
-                                    ? "bg-blue-50 border border-blue-200"
-                                    : "bg-gray-50 border border-gray-200"
+                                    ? "bg-blue-500/20 border border-blue-500/30"
+                                    : "bg-gray-700 border border-gray-600"
                                 }`}
                               >
                                 <div className="flex-1">
-                                  <div className="font-medium">{meal.name}</div>
-                                  <div className="text-gray-500">
+                                  <div className="font-medium text-white">{meal.name}</div>
+                                  <div className="text-gray-300">
                                     {meal.totalNutrition?.calories ||
                                       meal.calories ||
                                       0}{" "}
@@ -558,32 +397,36 @@ const MealPlanner = () => {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  {meal.status !== "consumed" && (
+                                  {meal.status !== "consumed" && day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
                                     <button
-                                      onClick={() =>
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         handleUpdateMealStatus(
                                           meal._id || meal.id,
                                           "consumed"
-                                        )
-                                      }
-                                      className="text-green-600 hover:bg-green-50 p-1 rounded"
+                                        );
+                                      }}
+                                      className="text-green-400 hover:bg-green-500/20 p-1 rounded transition-colors"
                                       title="Mark as consumed"
                                     >
                                       <Check className="w-3 h-3" />
                                     </button>
                                   )}
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteMeal(
-                                        meal._id || meal.id,
-                                        day,
-                                        mealType.id
-                                      )
-                                    }
-                                    className="text-red-500 hover:bg-red-50 p-1 rounded"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                                  {day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteMeal(
+                                          meal._id || meal.id,
+                                          day,
+                                          mealType.id
+                                        );
+                                      }}
+                                      className="text-red-400 hover:bg-red-500/20 p-1 rounded transition-colors"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -593,15 +436,15 @@ const MealPlanner = () => {
                     </div>
 
                     {/* Daily Totals */}
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <div className="text-xs text-gray-600 space-y-1">
+                    <div className="mt-4 pt-3 border-t border-gray-700">
+                      <div className="text-xs text-gray-300 space-y-1">
                         <div className="flex justify-between">
                           <span>Calories:</span>
-                          <span className="font-medium">{totals.calories}</span>
+                          <span className="font-medium text-white">{totals.calories}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Protein:</span>
-                          <span className="font-medium">{totals.protein}g</span>
+                          <span className="font-medium text-white">{totals.protein}g</span>
                         </div>
                       </div>
                     </div>
@@ -609,19 +452,18 @@ const MealPlanner = () => {
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Add Meal Modal */}
-        {showMealModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+          {/* Add Meal Modal */}
+          {showMealModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
+              <div className="p-6 border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold">Create New Meal</h3>
+                  <h3 className="text-xl font-semibold text-white">Create New Meal</h3>
                   <button
                     onClick={() => setShowMealModal(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-200 transition-colors"
                   >
                     ✕
                   </button>
@@ -632,7 +474,7 @@ const MealPlanner = () => {
                 {/* Meal Form */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Meal Name *
                     </label>
                     <input
@@ -644,13 +486,13 @@ const MealPlanner = () => {
                           name: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Enter meal name..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Meal Type
                     </label>
                     <select
@@ -661,7 +503,7 @@ const MealPlanner = () => {
                           type: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       {mealTypes.map((type) => (
                         <option key={type.id} value={type.id}>
@@ -672,7 +514,7 @@ const MealPlanner = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Planned Time
                     </label>
                     <input
@@ -684,12 +526,12 @@ const MealPlanner = () => {
                           plannedTime: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Date
                     </label>
                     <input
@@ -698,88 +540,56 @@ const MealPlanner = () => {
                       onChange={(e) =>
                         setSelectedDate(new Date(e.target.value))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                {/* Foods Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Foods & Ingredients
+                {/* Nutrition Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Calories
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowFoodSearch(true)}
-                      className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Food
-                    </button>
+                    <input
+                      type="number"
+                      value={mealForm.calories}
+                      onChange={(e) =>
+                        setMealForm((prev) => ({
+                          ...prev,
+                          calories: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="0"
+                      min="0"
+                    />
                   </div>
 
-                  {/* Added Foods List */}
-                  {mealForm.foods.length > 0 ? (
-                    <div className="space-y-2 mb-4">
-                      {mealForm.foods.map((food, index) => (
-                        <div
-                          key={index}
-                          className="bg-gray-50 rounded-lg p-3 flex items-center justify-between"
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">
-                              {food.name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {food.quantity}
-                              {food.unit} • {food.calories} cal • P:{" "}
-                              {food.nutrition?.protein || 0}g
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => removeFoodFromMeal(index)}
-                            className="text-red-500 hover:bg-red-50 p-1 rounded"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-
-                      {/* Meal Totals */}
-                      {mealForm.foods.length > 0 &&
-                        (() => {
-                          const totals = calculateMealTotals();
-                          return (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                              <div className="font-medium text-sm text-green-800 mb-1">
-                                Meal Totals:
-                              </div>
-                              <div className="text-sm text-green-700 grid grid-cols-4 gap-2">
-                                <div>{totals.calories} cal</div>
-                                <div>{totals.protein}g protein</div>
-                                <div>{totals.carbs}g carbs</div>
-                                <div>{totals.fat}g fat</div>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <ChefHat className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">
-                        No foods added yet
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Click "Add Food" to start building your meal
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Protein (g)
+                    </label>
+                    <input
+                      type="number"
+                      value={mealForm.protein}
+                      onChange={(e) =>
+                        setMealForm((prev) => ({
+                          ...prev,
+                          protein: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="0"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
                 </div>
 
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Notes (optional)
                   </label>
                   <textarea
@@ -791,16 +601,16 @@ const MealPlanner = () => {
                       }))
                     }
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Add any notes about this meal..."
                   />
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
                   <button
                     onClick={() => setShowMealModal(false)}
-                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    className="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
@@ -817,75 +627,195 @@ const MealPlanner = () => {
           </div>
         )}
 
-        {/* Food Search Modal */}
-        {showFoodSearch && (
+        {/* Day Detail Modal */}
+        {showDayModal && selectedDayForModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
+            <div className="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
+              <div className="p-6 border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Search Foods</h3>
+                  <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
+                    <ChefHat className="text-green-500" />
+                    {selectedDayForModal.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </h3>
                   <button
                     onClick={() => {
-                      setShowFoodSearch(false);
-                      setFoodSearchQuery("");
-                      setSearchedFoods([]);
+                      setShowDayModal(false);
+                      setSelectedDayForModal(null);
                     }}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-200 transition-colors text-2xl"
                   >
                     ✕
                   </button>
                 </div>
               </div>
 
-              <div className="p-4">
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search for foods..."
-                    value={foodSearchQuery}
-                    onChange={(e) => {
-                      setFoodSearchQuery(e.target.value);
-                      searchFoods(e.target.value);
-                    }}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="max-h-60 overflow-y-auto">
-                  {loadingFoods ? (
-                    <div className="text-center py-8">
-                      <div className="text-gray-500">Searching foods...</div>
-                    </div>
-                  ) : searchedFoods.length > 0 ? (
-                    <div className="space-y-2">
-                      {searchedFoods.map((food) => (
-                        <div
-                          key={food._id}
-                          onClick={() => addFoodToMeal(food)}
-                          className="border border-gray-200 rounded-lg p-3 hover:border-green-300 cursor-pointer transition-colors"
-                        >
-                          <div className="font-medium text-sm">{food.name}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Per {food.nutrition.servingSize}
-                            {food.nutrition.servingUnit}:{" "}
-                            {food.nutrition.calories} cal,{" "}
-                            {food.nutrition.protein}g protein
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {(() => {
+                  const dayMeals = getMealsForDate(selectedDayForModal);
+                  const dayTotals = getDayTotals(selectedDayForModal);
+                  
+                  return (
+                    <div className="space-y-6">
+                      {/* Daily Summary */}
+                      <div className="bg-gray-700 rounded-lg p-4">
+                        <h4 className="text-lg font-medium text-white mb-3">Daily Summary</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-green-400">{dayTotals.calories}</div>
+                            <div className="text-sm text-gray-300">Calories</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-400">{dayTotals.protein}g</div>
+                            <div className="text-sm text-gray-300">Protein</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-yellow-400">{dayTotals.carbs}g</div>
+                            <div className="text-sm text-gray-300">Carbs</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-red-400">{dayTotals.fat}g</div>
+                            <div className="text-sm text-gray-300">Fat</div>
                           </div>
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Meal Details */}
+                      <div className="space-y-4">
+                        {mealTypes.map((mealType) => {
+                          const meals = dayMeals[mealType.id] || [];
+                          return (
+                            <div key={mealType.id} className="bg-gray-700 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <h5 className="text-lg font-medium text-white flex items-center gap-2">
+                                  <span className="text-xl">{mealType.icon}</span>
+                                  {mealType.label}
+                                  <span className="text-sm text-gray-400">({mealType.time})</span>
+                                </h5>
+                                {selectedDayForModal >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedDate(selectedDayForModal);
+                                      setMealForm((prev) => ({
+                                        ...prev,
+                                        type: mealType.id,
+                                      }));
+                                      setShowDayModal(false);
+                                      setShowMealModal(true);
+                                    }}
+                                    className="text-green-400 hover:bg-green-500/20 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 text-sm"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                    Add Meal
+                                  </button>
+                                )}
+                              </div>
+
+                              {meals.length === 0 ? (
+                                <div className="text-gray-400 text-center py-4">
+                                  No meals planned for {mealType.label.toLowerCase()}
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {meals.map((meal) => (
+                                    <div
+                                      key={meal._id || meal.id}
+                                      className={`p-3 rounded-lg border transition-colors ${
+                                        meal.status === "consumed"
+                                          ? "bg-green-500/20 border-green-500/30"
+                                          : meal.status === "prepared"
+                                          ? "bg-blue-500/20 border-blue-500/30"
+                                          : "bg-gray-600 border-gray-500"
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <h6 className="font-medium text-white">{meal.name}</h6>
+                                            {meal.status === "consumed" && (
+                                              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                                                Consumed
+                                              </span>
+                                            )}
+                                            {meal.status === "prepared" && (
+                                              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
+                                                Prepared
+                                              </span>
+                                            )}
+                                          </div>
+                                          
+                                          <div className="text-sm text-gray-300 mt-1">
+                                            <div className="flex items-center gap-4">
+                                              <span>
+                                                {meal.totalNutrition?.calories || meal.calories || 0} cal
+                                              </span>
+                                              {meal.totalNutrition?.protein || meal.protein ? (
+                                                <span>
+                                                  Protein: {Math.round(meal.totalNutrition?.protein || meal.protein)}g
+                                                </span>
+                                              ) : null}
+                                              {meal.plannedTime && (
+                                                <span className="flex items-center gap-1">
+                                                  <Clock className="w-3 h-3" />
+                                                  {meal.plannedTime}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {meal.notes && (
+                                            <div className="text-sm text-gray-400 mt-2 italic">
+                                              {meal.notes}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 ml-4">
+                                          {meal.status !== "consumed" && selectedDayForModal >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                            <button
+                                              onClick={() =>
+                                                handleUpdateMealStatus(
+                                                  meal._id || meal.id,
+                                                  "consumed"
+                                                )
+                                              }
+                                              className="text-green-400 hover:bg-green-500/20 p-2 rounded transition-colors"
+                                              title="Mark as consumed"
+                                            >
+                                              <Check className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                          {selectedDayForModal >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                            <button
+                                              onClick={() =>
+                                                handleDeleteMeal(
+                                                  meal._id || meal.id,
+                                                  selectedDayForModal,
+                                                  mealType.id
+                                                )
+                                              }
+                                              className="text-red-400 hover:bg-red-500/20 p-2 rounded transition-colors"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  ) : foodSearchQuery ? (
-                    <div className="text-center py-8 text-gray-500">
-                      No foods found for "{foodSearchQuery}"
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      Start typing to search for foods
-                    </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
