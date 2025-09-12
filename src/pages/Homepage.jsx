@@ -15,6 +15,7 @@ import {
   Dumbbell,
   X,
   RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import apiService from "../services/api";
@@ -357,11 +358,15 @@ const Homepage = () => {
     }
 
     if (!goal) return 0;
-    return Math.min((progress / goal) * 100, 100);
+    return (progress / goal) * 100;
   };
 
   const isGoalCompleted = (goalType) => {
     return getProgressPercentage(goalType) >= 100;
+  };
+
+  const isGoalExceeded = (goalType) => {
+    return getProgressPercentage(goalType) > 100;
   };
 
   const getTodayStats = () => {
@@ -745,9 +750,14 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("calories") && (
+                  {isGoalCompleted("calories") && !isGoalExceeded("calories") && (
                     <div className="p-2 bg-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                  {isGoalExceeded("calories") && (
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
                     </div>
                   )}
                 </div>
@@ -767,17 +777,24 @@ const Homepage = () => {
                   <div
                     className="bg-orange-400 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${getProgressPercentage("calories")}%`,
+                      width: `${Math.min(getProgressPercentage("calories"), 100)}%`,
                     }}
                   ></div>
                 </div>
               </div>
 
-              {isGoalCompleted("calories") && (
+              {isGoalCompleted("calories") && !isGoalExceeded("calories") && (
                 <div className="flex items-center gap-2 text-green-600 text-xs sm:text-sm font-medium">
                   <Check className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Goal completed!</span>
                   <span className="sm:hidden">Done!</span>
+                </div>
+              )}
+              {isGoalExceeded("calories") && (
+                <div className="flex items-center gap-2 text-yellow-600 text-xs sm:text-sm font-medium">
+                  <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Goal exceeded!</span>
+                  <span className="sm:hidden">Exceeded!</span>
                 </div>
               )}
             </div>
@@ -826,9 +843,14 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("water") && (
+                  {isGoalCompleted("water") && !isGoalExceeded("water") && (
                     <div className="p-2 bg-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                  {isGoalExceeded("water") && (
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
                     </div>
                   )}
                 </div>
@@ -847,15 +869,21 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-blue-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${getProgressPercentage("water")}%` }}
+                    style={{ width: `${Math.min(getProgressPercentage("water"), 100)}%` }}
                   ></div>
                 </div>
               </div>
 
-              {isGoalCompleted("water") && (
+              {isGoalCompleted("water") && !isGoalExceeded("water") && (
                 <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Goal completed!
+                </div>
+              )}
+              {isGoalExceeded("water") && (
+                <div className="flex items-center gap-2 text-yellow-600 text-sm font-medium">
+                  <AlertTriangle className="w-4 h-4" />
+                  Goal exceeded!
                 </div>
               )}
             </div>
@@ -904,9 +932,14 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("meals") && (
+                  {isGoalCompleted("meals") && !isGoalExceeded("meals") && (
                     <div className="p-2 bg-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                  {isGoalExceeded("meals") && (
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
                     </div>
                   )}
                 </div>
@@ -925,15 +958,21 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-green-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${getProgressPercentage("meals")}%` }}
+                    style={{ width: `${Math.min(getProgressPercentage("meals"), 100)}%` }}
                   ></div>
                 </div>
               </div>
 
-              {isGoalCompleted("meals") && (
+              {isGoalCompleted("meals") && !isGoalExceeded("meals") && (
                 <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Goal completed!
+                </div>
+              )}
+              {isGoalExceeded("meals") && (
+                <div className="flex items-center gap-2 text-yellow-600 text-sm font-medium">
+                  <AlertTriangle className="w-4 h-4" />
+                  Goal exceeded!
                 </div>
               )}
             </div>
@@ -980,9 +1019,14 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("exercise") && (
+                  {isGoalCompleted("exercise") && !isGoalExceeded("exercise") && (
                     <div className="p-2 bg-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                  {isGoalExceeded("exercise") && (
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
                     </div>
                   )}
                 </div>
@@ -1003,16 +1047,22 @@ const Homepage = () => {
                   <div
                     className="bg-purple-400 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${getProgressPercentage("exercise")}%`,
+                      width: `${Math.min(getProgressPercentage("exercise"), 100)}%`,
                     }}
                   ></div>
                 </div>
               </div>
 
-              {isGoalCompleted("exercise") && (
+              {isGoalCompleted("exercise") && !isGoalExceeded("exercise") && (
                 <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Goal completed!
+                </div>
+              )}
+              {isGoalExceeded("exercise") && (
+                <div className="flex items-center gap-2 text-yellow-600 text-sm font-medium">
+                  <AlertTriangle className="w-4 h-4" />
+                  Goal exceeded!
                 </div>
               )}
             </div>
@@ -1059,9 +1109,14 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("sleep") && (
+                  {isGoalCompleted("sleep") && !isGoalExceeded("sleep") && (
                     <div className="p-2 bg-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                  {isGoalExceeded("sleep") && (
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
                     </div>
                   )}
                 </div>
@@ -1080,15 +1135,21 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-indigo-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${getProgressPercentage("sleep")}%` }}
+                    style={{ width: `${Math.min(getProgressPercentage("sleep"), 100)}%` }}
                   ></div>
                 </div>
               </div>
 
-              {isGoalCompleted("sleep") && (
+              {isGoalCompleted("sleep") && !isGoalExceeded("sleep") && (
                 <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Goal completed!
+                </div>
+              )}
+              {isGoalExceeded("sleep") && (
+                <div className="flex items-center gap-2 text-yellow-600 text-sm font-medium">
+                  <AlertTriangle className="w-4 h-4" />
+                  Goal exceeded!
                 </div>
               )}
             </div>
@@ -1135,9 +1196,14 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("steps") && (
+                  {isGoalCompleted("steps") && !isGoalExceeded("steps") && (
                     <div className="p-2 bg-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                  {isGoalExceeded("steps") && (
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
                     </div>
                   )}
                 </div>
@@ -1161,15 +1227,21 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-red-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${getProgressPercentage("steps")}%` }}
+                    style={{ width: `${Math.min(getProgressPercentage("steps"), 100)}%` }}
                   ></div>
                 </div>
               </div>
 
-              {isGoalCompleted("steps") && (
+              {isGoalCompleted("steps") && !isGoalExceeded("steps") && (
                 <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Goal completed!
+                </div>
+              )}
+              {isGoalExceeded("steps") && (
+                <div className="flex items-center gap-2 text-yellow-600 text-sm font-medium">
+                  <AlertTriangle className="w-4 h-4" />
+                  Goal exceeded!
                 </div>
               )}
             </div>
