@@ -26,21 +26,35 @@ const Homepage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [dailyGoals, setDailyGoals] = useState(null);
   const [goalProgress, setGoalProgress] = useState({});
+  const [inputValues, setInputValues] = useState({
+    calories: "",
+    water: "",
+    meals: "",
+    exercise: "",
+    sleep: "",
+    steps: "",
+  });
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completingGoal, setCompletingGoal] = useState(null);
+  const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
+  const [congratulatedGoal, setCongratulatedGoal] = useState(null);
 
   // Check if goals are set on component mount
   useEffect(() => {
     const loadGoalsAndProgress = async () => {
       if (hasCheckedGoals) return; // Don't check again if already checked
-      
+
       try {
         // Check if user is authenticated
         if (!apiService.isAuthenticated()) {
-          // Fallback to localStorage for demo
-          const savedGoals = localStorage.getItem("dailyGoals");
-          if (savedGoals) {
-            setDailyGoals(JSON.parse(savedGoals));
-            const savedProgress = localStorage.getItem("goalProgress") || "{}";
-            setGoalProgress(JSON.parse(savedProgress));
+          // Fallback to localStorage for demo with date-based storage
+          const dateKey = new Date().toDateString();
+          const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+          const goalsData = JSON.parse(savedGoalsData);
+
+          if (goalsData[dateKey]) {
+            setDailyGoals(goalsData[dateKey].goals);
+            setGoalProgress(goalsData[dateKey].progress || {});
           }
           // Don't automatically show goal setup - let user click "Edit Goals" if needed
           setHasCheckedGoals(true);
@@ -51,7 +65,7 @@ const Homepage = () => {
         const goalsResponse = await apiService.getCurrentGoals();
         if (goalsResponse.goals) {
           setDailyGoals(goalsResponse.goals);
-          
+
           // Load today's progress
           const progressResponse = await apiService.getTodayProgress();
           if (progressResponse.progress) {
@@ -60,13 +74,15 @@ const Homepage = () => {
         }
         setHasCheckedGoals(true);
       } catch (error) {
-        console.error('Error loading goals:', error);
-        // Fallback to localStorage for demo
-        const savedGoals = localStorage.getItem("dailyGoals");
-        if (savedGoals) {
-          setDailyGoals(JSON.parse(savedGoals));
-          const savedProgress = localStorage.getItem("goalProgress") || "{}";
-          setGoalProgress(JSON.parse(savedProgress));
+        console.error("Error loading goals:", error);
+        // Fallback to localStorage for demo with date-based storage
+        const dateKey = new Date().toDateString();
+        const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+        const goalsData = JSON.parse(savedGoalsData);
+
+        if (goalsData[dateKey]) {
+          setDailyGoals(goalsData[dateKey].goals);
+          setGoalProgress(goalsData[dateKey].progress || {});
         }
         setHasCheckedGoals(true);
       }
@@ -168,57 +184,124 @@ const Homepage = () => {
             meals: parseInt(goalSetupData.mealsGoal) || 3,
             exercise: parseInt(goalSetupData.exerciseGoal) || 30,
             sleep: parseInt(goalSetupData.sleepGoal) || 8,
-            steps: parseInt(goalSetupData.stepsGoal) || 10000
+            steps: parseInt(goalSetupData.stepsGoal) || 10000,
           },
           nutritionalTargets: {
             protein: parseInt(goalSetupData.proteinGoal) || 0,
             carbs: parseInt(goalSetupData.carbsGoal) || 0,
-            fiber: parseInt(goalSetupData.fiberGoal) || 0
-          }
+            fiber: parseInt(goalSetupData.fiberGoal) || 0,
+          },
         };
 
         if (apiService.isAuthenticated()) {
           const response = await apiService.createGoals(goalsData);
           setDailyGoals(response.goals);
         } else {
-          // Fallback to localStorage for demo
-          const goals = { ...goalSetupData, date: new Date().toDateString() };
+          // Fallback to localStorage for demo with date-based storage
+          const dateKey = new Date().toDateString();
+          const goals = { ...goalSetupData, date: dateKey };
           setDailyGoals(goals);
-          localStorage.setItem("dailyGoals", JSON.stringify(goals));
+
+          // Update date-based storage
+          const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+          const goalsData = JSON.parse(savedGoalsData);
+          goalsData[dateKey] = { goals, progress: {} };
+          localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
         }
-        
+
         setShowGoalSetup(false);
         setCurrentStep(0);
       } catch (error) {
-        console.error('Error saving goals:', error);
-        // Fallback to localStorage
-        const goals = { ...goalSetupData, date: new Date().toDateString() };
+        console.error("Error saving goals:", error);
+        // Fallback to localStorage with date-based storage
+        const dateKey = new Date().toDateString();
+        const goals = { ...goalSetupData, date: dateKey };
         setDailyGoals(goals);
-        localStorage.setItem("dailyGoals", JSON.stringify(goals));
+
+        // Update date-based storage
+        const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+        const goalsData = JSON.parse(savedGoalsData);
+        goalsData[dateKey] = { goals, progress: {} };
+        localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
+
         setShowGoalSetup(false);
         setCurrentStep(0);
       }
     }
   };
 
+  const updateGoalProgressFromInput = async (goalType) => {
+    const inputValue = inputValues[goalType];
+    if (!inputValue || isNaN(inputValue)) return;
+
+    const numValue = parseFloat(inputValue);
+    if (numValue < 0) return;
+
+    // Check if this would complete the goal
+    const goalFieldMap = {
+      calories: "calorieGoal",
+      water: "waterGoal", 
+      meals: "mealsGoal",
+      exercise: "exerciseGoal",
+      sleep: "sleepGoal",
+      steps: "stepsGoal",
+    };
+
+    let goal;
+    if (dailyGoals?.targets) {
+      goal = dailyGoals.targets[goalType];
+    } else {
+      const fieldName = goalFieldMap[goalType] || goalType;
+      goal = dailyGoals?.[fieldName];
+    }
+
+    const wouldComplete = goal && numValue >= goal && !isGoalCompleted(goalType);
+
+    if (wouldComplete) {
+      setCompletingGoal({ type: goalType, value: numValue });
+      setShowCompletionModal(true);
+    } else {
+      await updateGoalProgress(goalType, numValue);
+      setInputValues((prev) => ({ ...prev, [goalType]: "" }));
+    }
+  };
+
   const updateGoalProgress = async (goalType, value) => {
     try {
       if (apiService.isAuthenticated()) {
-        await apiService.updateProgress(goalType, value, 'set');
+        await apiService.updateProgress(goalType, value, "set");
         const newProgress = { ...goalProgress, [goalType]: value };
         setGoalProgress(newProgress);
       } else {
-        // Fallback to localStorage
+        // Fallback to localStorage with date-based storage
+        const dateKey = new Date().toDateString();
         const newProgress = { ...goalProgress, [goalType]: value };
         setGoalProgress(newProgress);
-        localStorage.setItem("goalProgress", JSON.stringify(newProgress));
+
+        // Update date-based storage
+        const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+        const goalsData = JSON.parse(savedGoalsData);
+        if (!goalsData[dateKey]) {
+          goalsData[dateKey] = { goals: dailyGoals, progress: {} };
+        }
+        goalsData[dateKey].progress = newProgress;
+        localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
       }
     } catch (error) {
-      console.error('Error updating progress:', error);
-      // Fallback to localStorage
+      console.error("Error updating progress:", error);
+      // Fallback to localStorage with date-based storage
+      const dateKey = new Date().toDateString();
       const newProgress = { ...goalProgress, [goalType]: value };
       setGoalProgress(newProgress);
-      localStorage.setItem("goalProgress", JSON.stringify(newProgress));
+
+      // Update date-based storage
+      const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+      const goalsData = JSON.parse(savedGoalsData);
+      if (!goalsData[dateKey]) {
+        goalsData[dateKey] = { goals: dailyGoals, progress: {} };
+      }
+      goalsData[dateKey].progress = newProgress;
+      localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
     }
   };
 
@@ -226,8 +309,9 @@ const Homepage = () => {
     // Clear all data
     localStorage.removeItem("dailyGoals");
     localStorage.removeItem("goalProgress");
+    localStorage.removeItem("dailyGoalsData");
     apiService.logout();
-    
+
     // Reset state
     setDailyGoals(null);
     setGoalProgress({});
@@ -251,17 +335,27 @@ const Homepage = () => {
   const getProgressPercentage = (goalType) => {
     if (!dailyGoals || !goalProgress[goalType]) return 0;
     const progress = goalProgress[goalType];
-    
-    // Handle backend data structure (targets) vs localStorage structure
+
+    // Map goal types to correct field names
+    const goalFieldMap = {
+      calories: "calorieGoal",
+      water: "waterGoal",
+      meals: "mealsGoal",
+      exercise: "exerciseGoal",
+      sleep: "sleepGoal",
+      steps: "stepsGoal",
+    };
+
     let goal;
     if (dailyGoals.targets) {
       // Backend structure
-      goal = dailyGoals.targets[goalType] || dailyGoals.targets[goalType.replace('Goal', '')];
+      goal = dailyGoals.targets[goalType];
     } else {
-      // localStorage structure
-      goal = dailyGoals[goalType];
+      // localStorage structure - use mapped field name
+      const fieldName = goalFieldMap[goalType] || goalType;
+      goal = dailyGoals[fieldName];
     }
-    
+
     if (!goal) return 0;
     return Math.min((progress / goal) * 100, 100);
   };
@@ -276,12 +370,46 @@ const Homepage = () => {
       "calories",
       "water",
       "meals",
-      "exercise", 
+      "exercise",
       "sleep",
       "steps",
     ];
     const completed = goalTypes.filter((type) => isGoalCompleted(type)).length;
     return { completed, total: goalTypes.length };
+  };
+
+  const handleConfirmCompletion = async () => {
+    if (completingGoal) {
+      await updateGoalProgress(completingGoal.type, completingGoal.value);
+      setInputValues((prev) => ({ ...prev, [completingGoal.type]: "" }));
+      setCongratulatedGoal(completingGoal.type);
+      setShowCompletionModal(false);
+      setCompletingGoal(null);
+      setShowCongratulationsModal(true);
+    }
+  };
+
+  const handleCancelCompletion = () => {
+    setCompletingGoal({ type: completingGoal.type, value: 0 });
+    setShowCompletionModal(false);
+    setCompletingGoal(null);
+  };
+
+  const handleCloseCongratulations = () => {
+    setShowCongratulationsModal(false);
+    setCongratulatedGoal(null);
+  };
+
+  const getGoalDisplayName = (goalType) => {
+    const displayNames = {
+      calories: "Calories",
+      water: "Water",
+      meals: "Meals", 
+      exercise: "Exercise",
+      sleep: "Sleep",
+      steps: "Steps"
+    };
+    return displayNames[goalType] || goalType;
   };
 
   const currentQuestion = goalSetupQuestions[currentStep];
@@ -292,8 +420,11 @@ const Homepage = () => {
   if (!dailyGoals && !showGoalSetup && hasCheckedGoals) {
     return (
       <div className="flex h-screen bg-gradient-to-br from-gray-900 to-gray-800">
-        <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-        
+        <Sidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+        />
+
         <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
           <div className="text-center max-w-md">
             <div className="mb-6">
@@ -302,10 +433,11 @@ const Homepage = () => {
                 Welcome to NutriTrack
               </h1>
               <p className="text-gray-400 mb-6">
-                Set your daily goals to start tracking your nutrition and fitness journey
+                Set your daily goals to start tracking your nutrition and
+                fitness journey
               </p>
             </div>
-            
+
             <button
               onClick={() => setShowGoalSetup(true)}
               className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 mx-auto"
@@ -477,8 +609,22 @@ const Homepage = () => {
                   <span className="hidden sm:inline">Today's Goals</span>
                   <span className="sm:hidden">Goals</span>
                 </h1>
-                <p className="text-gray-400 mt-1 text-sm sm:text-base hidden sm:block">
-                  Track your daily progress and stay motivated
+                <p className="text-gray-400 mt-1 text-sm sm:text-base">
+                  <span className="hidden sm:inline">
+                    {new Date().toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}{" "}
+                    - Track your daily progress and stay motivated
+                  </span>
+                  <span className="sm:hidden">
+                    {new Date().toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
                 </p>
               </div>
             </div>
@@ -488,16 +634,8 @@ const Homepage = () => {
                 className="flex items-center gap-2 bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span className="hidden sm:inline">Restart</span>
+                <span className="hidden sm:inline">Reset Day</span>
                 <span className="sm:hidden">Reset</span>
-              </button>
-              <button
-                onClick={() => setShowGoalSetup(true)}
-                className="flex items-center gap-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit Goals</span>
-                <span className="sm:hidden">Edit</span>
               </button>
             </div>
           </div>
@@ -510,10 +648,26 @@ const Homepage = () => {
             <div className="bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl p-6 sm:p-8 text-white">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
                 <div className="text-center sm:text-left">
-                  <h2 className="text-2xl sm:text-3xl font-bold mb-2">Good morning! 🌟</h2>
-                  <p className="text-green-100 text-base sm:text-lg">
+                  <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+                    Good{" "}
+                    {new Date().getHours() < 12
+                      ? "morning"
+                      : new Date().getHours() < 17
+                      ? "afternoon"
+                      : "evening"}
+                    ! 🌟
+                  </h2>
+                  <p className="text-green-100 text-base sm:text-lg mb-1">
                     You've completed {todayStats.completed} of{" "}
                     {todayStats.total} goals today
+                  </p>
+                  <p className="text-green-200/80 text-sm">
+                    {new Date().toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </p>
                 </div>
                 <div className="text-center">
@@ -523,7 +677,9 @@ const Homepage = () => {
                     )}
                     %
                   </div>
-                  <div className="text-green-100 text-sm sm:text-base">Complete</div>
+                  <div className="text-green-100 text-sm sm:text-base">
+                    Complete
+                  </div>
                 </div>
               </div>
 
@@ -553,39 +709,58 @@ const Homepage = () => {
                     <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Calories</h3>
-                    <p className="text-xs sm:text-sm text-gray-400">Energy intake</p>
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
+                      Calories
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-400">
+                      Energy intake
+                    </p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    !isGoalCompleted("calories") &&
-                    updateGoalProgress(
-                      "calories",
-                      (goalProgress.calories || 0) + 100
-                    )
-                  }
-                  className={`p-2 rounded-lg transition-colors ${
-                    isGoalCompleted("calorieGoal")
-                      ? "bg-green-500/20 cursor-default"
-                      : "hover:bg-gray-700 cursor-pointer"
-                  }`}
-                >
-                  {isGoalCompleted("calorieGoal") ? (
-                    <Check className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-gray-300" />
+                <div className="flex items-center gap-2">
+                  {!isGoalCompleted("calories") && (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValues.calories}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            calories: e.target.value,
+                          }))
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          updateGoalProgressFromInput("calories")
+                        }
+                        placeholder="0"
+                        className="w-16 px-2 py-1 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-orange-400 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => updateGoalProgressFromInput("calories")}
+                        className="px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
+                        title="Set current calories"
+                      >
+                        Set
+                      </button>
+                    </>
                   )}
-                </button>
+                  {isGoalCompleted("calories") && (
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xl sm:text-2xl font-bold text-white">
-                    {goalProgress.calorieGoal || 0}
+                    {goalProgress.calories || 0}
                   </span>
                   <span className="text-gray-400 text-sm sm:text-base">
-                    / {dailyGoals?.calorieGoal} cal
+                    / {dailyGoals?.targets?.calories || dailyGoals?.calorieGoal}{" "}
+                    cal
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -615,39 +790,58 @@ const Homepage = () => {
                     <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Water</h3>
-                    <p className="text-xs sm:text-sm text-gray-400">Hydration</p>
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
+                      Water
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-400">
+                      Hydration
+                    </p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    !isGoalCompleted("water") &&
-                    updateGoalProgress(
-                      "water",
-                      (goalProgress.water || 0) + 1
-                    )
-                  }
-                  className={`p-2 rounded-lg transition-colors ${
-                    isGoalCompleted("water")
-                      ? "bg-green-500/20 cursor-default"
-                      : "hover:bg-gray-700 cursor-pointer"
-                  }`}
-                >
-                  {isGoalCompleted("water") ? (
-                    <Check className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-gray-300" />
+                <div className="flex items-center gap-2">
+                  {!isGoalCompleted("water") && (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValues.water}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            water: e.target.value,
+                          }))
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          updateGoalProgressFromInput("water")
+                        }
+                        placeholder="0"
+                        className="w-12 px-2 py-1 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-400 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => updateGoalProgressFromInput("water")}
+                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                        title="Set current glasses"
+                      >
+                        Set
+                      </button>
+                    </>
                   )}
-                </button>
+                  {isGoalCompleted("water") && (
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xl sm:text-2xl font-bold text-white">
-                    {goalProgress.waterGoal || 0}
+                    {goalProgress.water || 0}
                   </span>
                   <span className="text-gray-400 text-sm sm:text-base">
-                    / {dailyGoals?.waterGoal} glasses
+                    / {dailyGoals?.targets?.water || dailyGoals?.waterGoal}{" "}
+                    glasses
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -674,39 +868,58 @@ const Homepage = () => {
                     <Utensils className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Meals</h3>
-                    <p className="text-xs sm:text-sm text-gray-400">Nutrition</p>
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
+                      Meals
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-400">
+                      Nutrition
+                    </p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    !isGoalCompleted("meals") &&
-                    updateGoalProgress(
-                      "meals",
-                      (goalProgress.meals || 0) + 1
-                    )
-                  }
-                  className={`p-2 rounded-lg transition-colors ${
-                    isGoalCompleted("meals")
-                      ? "bg-green-500/20 cursor-default"
-                      : "hover:bg-gray-700 cursor-pointer"
-                  }`}
-                >
-                  {isGoalCompleted("meals") ? (
-                    <Check className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-gray-300" />
+                <div className="flex items-center gap-2">
+                  {!isGoalCompleted("meals") && (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValues.meals}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            meals: e.target.value,
+                          }))
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          updateGoalProgressFromInput("meals")
+                        }
+                        placeholder="0"
+                        className="w-12 px-2 py-1 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-green-400 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => updateGoalProgressFromInput("meals")}
+                        className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                        title="Set current meals"
+                      >
+                        Set
+                      </button>
+                    </>
                   )}
-                </button>
+                  {isGoalCompleted("meals") && (
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-2xl font-bold text-white">
-                    {goalProgress.mealsGoal || 0}
+                    {goalProgress.meals || 0}
                   </span>
                   <span className="text-gray-400">
-                    / {dailyGoals?.mealsGoal} meals
+                    / {dailyGoals?.targets?.meals || dailyGoals?.mealsGoal}{" "}
+                    meals
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -733,39 +946,57 @@ const Homepage = () => {
                     <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Exercise</h3>
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
+                      Exercise
+                    </h3>
                     <p className="text-xs sm:text-sm text-gray-400">Activity</p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    !isGoalCompleted("exercise") &&
-                    updateGoalProgress(
-                      "exercise",
-                      (goalProgress.exercise || 0) + 15
-                    )
-                  }
-                  className={`p-2 rounded-lg transition-colors ${
-                    isGoalCompleted("exercise")
-                      ? "bg-green-500/20 cursor-default"
-                      : "hover:bg-gray-700 cursor-pointer"
-                  }`}
-                >
-                  {isGoalCompleted("exercise") ? (
-                    <Check className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-gray-300" />
+                <div className="flex items-center gap-2">
+                  {!isGoalCompleted("exercise") && (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValues.exercise}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            exercise: e.target.value,
+                          }))
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          updateGoalProgressFromInput("exercise")
+                        }
+                        placeholder="0"
+                        className="w-12 px-2 py-1 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-purple-400 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => updateGoalProgressFromInput("exercise")}
+                        className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors"
+                        title="Set current minutes"
+                      >
+                        Set
+                      </button>
+                    </>
                   )}
-                </button>
+                  {isGoalCompleted("exercise") && (
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-2xl font-bold text-white">
-                    {goalProgress.exerciseGoal || 0}
+                    {goalProgress.exercise || 0}
                   </span>
                   <span className="text-gray-400">
-                    / {dailyGoals?.exerciseGoal} min
+                    /{" "}
+                    {dailyGoals?.targets?.exercise || dailyGoals?.exerciseGoal}{" "}
+                    min
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -794,32 +1025,56 @@ const Homepage = () => {
                     <Moon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Sleep</h3>
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
+                      Sleep
+                    </h3>
                     <p className="text-xs sm:text-sm text-gray-400">Recovery</p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    !isGoalCompleted("sleep") &&
-                    updateGoalProgress("sleep", dailyGoals?.targets?.sleep || dailyGoals?.sleepGoal || 8)
-                  }
-                  className={`p-2 rounded-lg transition-colors ${
-                    isGoalCompleted("sleep")
-                      ? "bg-green-500/20 cursor-default"
-                      : "hover:bg-gray-700 cursor-pointer"
-                  }`}
-                >
-                  <Check className="w-4 h-4 text-green-400" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {!isGoalCompleted("sleep") && (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValues.sleep}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            sleep: e.target.value,
+                          }))
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          updateGoalProgressFromInput("sleep")
+                        }
+                        placeholder="0"
+                        className="w-12 px-2 py-1 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-indigo-400 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => updateGoalProgressFromInput("sleep")}
+                        className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
+                        title="Set current hours"
+                      >
+                        Set
+                      </button>
+                    </>
+                  )}
+                  {isGoalCompleted("sleep") && (
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-2xl font-bold text-white">
-                    {goalProgress.sleepGoal || 0}
+                    {goalProgress.sleep || 0}
                   </span>
                   <span className="text-gray-400">
-                    / {dailyGoals?.sleepGoal} hours
+                    / {dailyGoals?.targets?.sleep || dailyGoals?.sleepGoal}{" "}
+                    hours
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -846,39 +1101,61 @@ const Homepage = () => {
                     <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Steps</h3>
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
+                      Steps
+                    </h3>
                     <p className="text-xs sm:text-sm text-gray-400">Movement</p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    !isGoalCompleted("steps") &&
-                    updateGoalProgress(
-                      "steps",
-                      (goalProgress.steps || 0) + 1000
-                    )
-                  }
-                  className={`p-2 rounded-lg transition-colors ${
-                    isGoalCompleted("steps")
-                      ? "bg-green-500/20 cursor-default"
-                      : "hover:bg-gray-700 cursor-pointer"
-                  }`}
-                >
-                  {isGoalCompleted("steps") ? (
-                    <Check className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-gray-300" />
+                <div className="flex items-center gap-2">
+                  {!isGoalCompleted("steps") && (
+                    <>
+                      <input
+                        type="number"
+                        value={inputValues.steps}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            steps: e.target.value,
+                          }))
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          updateGoalProgressFromInput("steps")
+                        }
+                        placeholder="0"
+                        className="w-16 px-2 py-1 text-sm bg-gray-700 text-white rounded border border-gray-600 focus:border-red-400 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => updateGoalProgressFromInput("steps")}
+                        className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                        title="Set current steps"
+                      >
+                        Set
+                      </button>
+                    </>
                   )}
-                </button>
+                  {isGoalCompleted("steps") && (
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-2xl font-bold text-white">
-                    {(goalProgress.stepsGoal || 0).toLocaleString()}
+                    {(goalProgress.steps || 0).toLocaleString()}
                   </span>
                   <span className="text-gray-400">
-                    / {(dailyGoals?.stepsGoal || 0).toLocaleString()} steps
+                    /{" "}
+                    {(
+                      dailyGoals?.targets?.steps ||
+                      dailyGoals?.stepsGoal ||
+                      0
+                    ).toLocaleString()}{" "}
+                    steps
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -899,6 +1176,64 @@ const Homepage = () => {
           </div>
         </div>
       </div>
+
+      {/* Goal Completion Confirmation Modal */}
+      {showCompletionModal && completingGoal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Target className="w-8 h-8 text-yellow-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Complete {getGoalDisplayName(completingGoal.type)} Goal?
+              </h3>
+              <p className="text-gray-300 mb-6">
+                Are you sure you've completed your {getGoalDisplayName(completingGoal.type).toLowerCase()} goal for today?
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={handleCancelCompletion}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  No, go back
+                </button>
+                <button
+                  onClick={handleConfirmCompletion}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  Yes, complete it!
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Congratulations Modal */}
+      {showCongratulationsModal && congratulatedGoal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="w-10 h-10 text-green-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">
+                🎉 Congratulations!
+              </h3>
+              <p className="text-gray-300 mb-6">
+                You've completed your {getGoalDisplayName(congratulatedGoal).toLowerCase()} goal for today! Keep up the great work!
+              </p>
+              <button
+                onClick={handleCloseCongratulations}
+                className="px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-lg font-semibold transition-all"
+              >
+                Awesome! 🌟
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

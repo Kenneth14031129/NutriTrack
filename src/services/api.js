@@ -130,6 +130,102 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Meals
+  async createMeal(mealData) {
+    const response = await fetch(`${API_BASE_URL}/meals`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(mealData)
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getTodayMeals() {
+    const response = await fetch(`${API_BASE_URL}/meals/today`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getMealsForDate(date) {
+    const dateString = date.toISOString().split('T')[0];
+    const response = await fetch(`${API_BASE_URL}/meals/date/${dateString}`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getWeeklyMealPlan(startDate) {
+    const dateString = startDate.toISOString().split('T')[0];
+    const response = await fetch(`${API_BASE_URL}/meals/week/${dateString}`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async updateMeal(mealId, mealData) {
+    const response = await fetch(`${API_BASE_URL}/meals/${mealId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(mealData)
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async deleteMeal(mealId) {
+    const response = await fetch(`${API_BASE_URL}/meals/${mealId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async updateMealStatus(mealId, status) {
+    const response = await fetch(`${API_BASE_URL}/meals/${mealId}/status`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ status })
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async duplicateMeal(mealId, newDate, newType) {
+    const response = await fetch(`${API_BASE_URL}/meals/${mealId}/duplicate`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ newDate, newType })
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  // Foods
+  async searchFoods(query, options = {}) {
+    const params = new URLSearchParams({ q: query, ...options });
+    const response = await fetch(`${API_BASE_URL}/foods/search?${params}`, {
+      headers: this.getHeaders()
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getFoodsByBarcode(barcode) {
+    const response = await fetch(`${API_BASE_URL}/scanner/barcode`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ barcode })
+    });
+    
+    return this.handleResponse(response);
+  }
+
   // Check if user is authenticated
   isAuthenticated() {
     return !!this.token;
