@@ -2,19 +2,22 @@ const API_BASE_URL = 'http://localhost:5000/api';
 
 class ApiService {
   constructor() {
-    this.token = localStorage.getItem('authToken');
+    this.token = sessionStorage.getItem('authToken');
   }
 
   // Helper method to get headers
   getHeaders() {
+    // Always get fresh token from sessionStorage
+    this.token = sessionStorage.getItem('authToken');
+
     const headers = {
       'Content-Type': 'application/json',
     };
-    
+
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
     }
-    
+
     return headers;
   }
 
@@ -38,7 +41,7 @@ class ApiService {
     const data = await this.handleResponse(response);
     if (data.token) {
       this.token = data.token;
-      localStorage.setItem('authToken', data.token);
+      sessionStorage.setItem('authToken', data.token);
     }
     return data;
   }
@@ -53,14 +56,14 @@ class ApiService {
     const data = await this.handleResponse(response);
     if (data.token) {
       this.token = data.token;
-      localStorage.setItem('authToken', data.token);
+      sessionStorage.setItem('authToken', data.token);
     }
     return data;
   }
 
   logout() {
     this.token = null;
-    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('authToken');
   }
 
   // Goals

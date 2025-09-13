@@ -243,15 +243,23 @@ const Scanner = () => {
   };
 
   const formatTime = (date) => {
+    if (!date) return "Unknown time";
+
+    // Convert to Date object if it's not already
+    const dateObj = date instanceof Date ? date : new Date(date);
+
+    // Check if it's a valid date
+    if (isNaN(dateObj.getTime())) return "Invalid date";
+
     const now = new Date();
-    const diff = now - date;
+    const diff = now - dateObj;
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
 
     if (minutes < 1) return "Just now";
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
-    return date.toLocaleDateString();
+    return dateObj.toLocaleDateString();
   };
 
   return (

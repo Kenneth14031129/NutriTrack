@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Home,
   Target,
@@ -37,54 +37,37 @@ const Homepage = () => {
   });
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completingGoal, setCompletingGoal] = useState(null);
-  const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
+  const [showCongratulationsModal, setShowCongratulationsModal] =
+    useState(false);
   const [congratulatedGoal, setCongratulatedGoal] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
 
-  // Check if goals are set on component mount
+  // Check if goals are set on component mount and show goal setup each day
   useEffect(() => {
     const loadGoalsAndProgress = async () => {
       if (hasCheckedGoals) return; // Don't check again if already checked
 
       try {
-        // Check if user is authenticated
-        if (!apiService.isAuthenticated()) {
-          // Fallback to localStorage for demo with date-based storage
-          const dateKey = new Date().toDateString();
-          const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
-          const goalsData = JSON.parse(savedGoalsData);
-
-          if (goalsData[dateKey]) {
-            setDailyGoals(goalsData[dateKey].goals);
-            setGoalProgress(goalsData[dateKey].progress || {});
-          }
-          // Don't automatically show goal setup - let user click "Edit Goals" if needed
-          setHasCheckedGoals(true);
-          return;
-        }
-
-        // Try to load current goals from backend
-        const goalsResponse = await apiService.getCurrentGoals();
-        if (goalsResponse.goals) {
-          setDailyGoals(goalsResponse.goals);
-
-          // Load today's progress
-          const progressResponse = await apiService.getTodayProgress();
-          if (progressResponse.progress) {
-            setGoalProgress(progressResponse.progress.current);
-          }
-        }
-        setHasCheckedGoals(true);
-      } catch (error) {
-        console.error("Error loading goals:", error);
-        // Fallback to localStorage for demo with date-based storage
+        // Check for existing goals for today first
         const dateKey = new Date().toDateString();
         const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
         const goalsData = JSON.parse(savedGoalsData);
 
         if (goalsData[dateKey]) {
+          // Goals exist for today, load them
           setDailyGoals(goalsData[dateKey].goals);
           setGoalProgress(goalsData[dateKey].progress || {});
+          setHasCheckedGoals(true);
+          return;
         }
+
+        // No goals for today, show goal setup
+        setShowGoalSetup(true);
+        setHasCheckedGoals(true);
+      } catch (error) {
+        console.error("Error loading goals:", error);
+        // Show goal setup on error
+        setShowGoalSetup(true);
         setHasCheckedGoals(true);
       }
     };
@@ -241,7 +224,7 @@ const Homepage = () => {
     // Check if this would complete the goal
     const goalFieldMap = {
       calories: "calorieGoal",
-      water: "waterGoal", 
+      water: "waterGoal",
       meals: "mealsGoal",
       exercise: "exerciseGoal",
       sleep: "sleepGoal",
@@ -256,7 +239,8 @@ const Homepage = () => {
       goal = dailyGoals?.[fieldName];
     }
 
-    const wouldComplete = goal && numValue >= goal && !isGoalCompleted(goalType);
+    const wouldComplete =
+      goal && numValue >= goal && !isGoalCompleted(goalType);
 
     if (wouldComplete) {
       setCompletingGoal({ type: goalType, value: numValue });
@@ -307,6 +291,10 @@ const Homepage = () => {
   };
 
   const handleRestart = () => {
+    setShowResetModal(true);
+  };
+
+  const confirmReset = () => {
     // Clear all data
     localStorage.removeItem("dailyGoals");
     localStorage.removeItem("goalProgress");
@@ -331,6 +319,11 @@ const Homepage = () => {
     });
     setCurrentStep(0);
     setShowGoalSetup(true);
+    setShowResetModal(false);
+  };
+
+  const cancelReset = () => {
+    setShowResetModal(false);
   };
 
   const getProgressPercentage = (goalType) => {
@@ -409,10 +402,10 @@ const Homepage = () => {
     const displayNames = {
       calories: "Calories",
       water: "Water",
-      meals: "Meals", 
+      meals: "Meals",
       exercise: "Exercise",
       sleep: "Sleep",
-      steps: "Steps"
+      steps: "Steps",
     };
     return displayNames[goalType] || goalType;
   };
@@ -465,22 +458,17 @@ const Homepage = () => {
             <div className="mb-8">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-white">
-                  Set Your Daily Goals
+                  Set your goals -{" "}
+                  {new Date().toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </h2>
                 <div className="flex items-center gap-4">
                   <span className="text-xs sm:text-sm text-gray-400">
                     {currentStep + 1} of {goalSetupQuestions.length}
                   </span>
-                  <button
-                    onClick={() => {
-                      setShowGoalSetup(false);
-                      setCurrentStep(0);
-                    }}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
-                    title="Close"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2">
@@ -499,7 +487,9 @@ const Homepage = () => {
             <div className="text-center mb-8">
               {currentIcon && (
                 <div className="w-20 h-20 bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <currentIcon className="w-10 h-10 text-green-400" />
+                  {React.createElement(currentIcon, {
+                    className: "w-10 h-10 text-green-400",
+                  })}
                 </div>
               )}
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 text-center">
@@ -750,11 +740,12 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("calories") && !isGoalExceeded("calories") && (
-                    <div className="p-2 bg-green-500/20 rounded-lg">
-                      <Check className="w-4 h-4 text-green-400" />
-                    </div>
-                  )}
+                  {isGoalCompleted("calories") &&
+                    !isGoalExceeded("calories") && (
+                      <div className="p-2 bg-green-500/20 rounded-lg">
+                        <Check className="w-4 h-4 text-green-400" />
+                      </div>
+                    )}
                   {isGoalExceeded("calories") && (
                     <div className="p-2 bg-yellow-500/20 rounded-lg">
                       <AlertTriangle className="w-4 h-4 text-yellow-400" />
@@ -777,7 +768,10 @@ const Homepage = () => {
                   <div
                     className="bg-orange-400 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${Math.min(getProgressPercentage("calories"), 100)}%`,
+                      width: `${Math.min(
+                        getProgressPercentage("calories"),
+                        100
+                      )}%`,
                     }}
                   ></div>
                 </div>
@@ -869,7 +863,12 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-blue-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(getProgressPercentage("water"), 100)}%` }}
+                    style={{
+                      width: `${Math.min(
+                        getProgressPercentage("water"),
+                        100
+                      )}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -958,7 +957,12 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-green-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(getProgressPercentage("meals"), 100)}%` }}
+                    style={{
+                      width: `${Math.min(
+                        getProgressPercentage("meals"),
+                        100
+                      )}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -1019,11 +1023,12 @@ const Homepage = () => {
                       </button>
                     </>
                   )}
-                  {isGoalCompleted("exercise") && !isGoalExceeded("exercise") && (
-                    <div className="p-2 bg-green-500/20 rounded-lg">
-                      <Check className="w-4 h-4 text-green-400" />
-                    </div>
-                  )}
+                  {isGoalCompleted("exercise") &&
+                    !isGoalExceeded("exercise") && (
+                      <div className="p-2 bg-green-500/20 rounded-lg">
+                        <Check className="w-4 h-4 text-green-400" />
+                      </div>
+                    )}
                   {isGoalExceeded("exercise") && (
                     <div className="p-2 bg-yellow-500/20 rounded-lg">
                       <AlertTriangle className="w-4 h-4 text-yellow-400" />
@@ -1047,7 +1052,10 @@ const Homepage = () => {
                   <div
                     className="bg-purple-400 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${Math.min(getProgressPercentage("exercise"), 100)}%`,
+                      width: `${Math.min(
+                        getProgressPercentage("exercise"),
+                        100
+                      )}%`,
                     }}
                   ></div>
                 </div>
@@ -1135,7 +1143,12 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-indigo-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(getProgressPercentage("sleep"), 100)}%` }}
+                    style={{
+                      width: `${Math.min(
+                        getProgressPercentage("sleep"),
+                        100
+                      )}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -1227,7 +1240,12 @@ const Homepage = () => {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-red-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(getProgressPercentage("steps"), 100)}%` }}
+                    style={{
+                      width: `${Math.min(
+                        getProgressPercentage("steps"),
+                        100
+                      )}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -1251,7 +1269,7 @@ const Homepage = () => {
 
       {/* Goal Completion Confirmation Modal */}
       {showCompletionModal && completingGoal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
             <div className="text-center">
               <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1261,7 +1279,9 @@ const Homepage = () => {
                 Complete {getGoalDisplayName(completingGoal.type)} Goal?
               </h3>
               <p className="text-gray-300 mb-6">
-                Are you sure you've completed your {getGoalDisplayName(completingGoal.type).toLowerCase()} goal for today?
+                Are you sure you've completed your{" "}
+                {getGoalDisplayName(completingGoal.type).toLowerCase()} goal for
+                today?
               </p>
               <div className="flex gap-3 justify-center">
                 <button
@@ -1294,7 +1314,9 @@ const Homepage = () => {
                 🎉 Congratulations!
               </h3>
               <p className="text-gray-300 mb-6">
-                You've completed your {getGoalDisplayName(congratulatedGoal).toLowerCase()} goal for today! Keep up the great work!
+                You've completed your{" "}
+                {getGoalDisplayName(congratulatedGoal).toLowerCase()} goal for
+                today! Keep up the great work!
               </p>
               <button
                 onClick={handleCloseCongratulations}
@@ -1302,6 +1324,41 @@ const Homepage = () => {
               >
                 Awesome! 🌟
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Day Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Reset Your Day?
+              </h3>
+              <p className="text-gray-300 mb-6">
+                This will clear all your progress and goals for today. You'll
+                need to set up your goals again and all current progress will be
+                lost. This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={cancelReset}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmReset}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Yes, Reset Day
+                </button>
+              </div>
             </div>
           </div>
         </div>

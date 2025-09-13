@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import apiService from "../services/api";
 import {
   Settings,
   ChevronRight,
@@ -9,6 +10,7 @@ import {
   Shield,
   ChefHat,
   Home,
+  LogOut,
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
@@ -50,6 +52,14 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
     },
   ];
 
+  const handleLogout = () => {
+    apiService.logout();
+    navigate("/login");
+    if (window.innerWidth < 1024) {
+      onClose();
+    }
+  };
+
   const accountItems = [
     {
       id: "settings",
@@ -86,6 +96,9 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
           onClick={() => {
             if (hasSubmenu) {
               toggleSubmenu(item.id);
+            } else if (item.onClick) {
+              // Handle custom onClick function
+              item.onClick();
             } else {
               setActiveSection(item.id);
               // Navigate to the route if it exists
@@ -217,6 +230,17 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
               ))}
             </div>
           </nav>
+
+          {/* Logout Button - Fixed at bottom */}
+          <div className="p-4 border-t border-white/20">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <LogOut className="w-5 h-5 text-white/60" />
+              <span className="font-medium">Logout</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>

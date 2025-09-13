@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { Eye, EyeOff, Mail, Lock, Leaf, Apple, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiService from "../services/api";
+import { useToast } from "../components/Toast";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { showToast, ToastComponent } = useToast();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
-    email: "yuan@nutritrack.com",
-    password: "123456",
+    email: "",
+    password: "",
     confirmPassword: "",
     fullName: "",
     rememberMe: false,
@@ -70,12 +73,41 @@ const Login = () => {
 
     setIsLoading(true);
 
-    // Simulate login/signup process
-    setTimeout(() => {
+    try {
+      if (isSignUp) {
+        // Register new user
+        await apiService.register({
+          name: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+        });
+        showToast(`Welcome to NutriTrack, ${formData.fullName}! 🎉`, 'success', 5000);
+      } else {
+        // Login existing user
+        await apiService.login({
+          email: formData.email,
+          password: formData.password,
+        });
+        showToast('Welcome back! Login successful 👋', 'success', 4000);
+      }
+
+      // Navigate to homepage on success after a short delay
+      setTimeout(() => {
+        navigate("/homepage");
+      }, 1500);
+    } catch (error) {
+      console.error(`${isSignUp ? "Registration" : "Login"} error:`, error);
+      showToast(
+        error.message || `${isSignUp ? "Registration" : "Login"} failed. Please try again.`,
+        'error',
+        6000
+      );
+      setErrors({
+        submit: error.message || `${isSignUp ? "Registration" : "Login"} failed. Please try again.`
+      });
+    } finally {
       setIsLoading(false);
-      console.log(`${isSignUp ? "Signup" : "Login"} attempted with:`, formData);
-      navigate("/ai-coach");
-    }, 2000);
+    }
   };
 
   const toggleMode = () => {
@@ -318,6 +350,7 @@ const Login = () => {
                 </a>
               </div>
 
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -401,8 +434,11 @@ const Login = () => {
         </div>
       </div>
 
+      {/* Toast Notifications */}
+      <ToastComponent />
+
       {/* Additional Styles */}
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from {
             opacity: 0;

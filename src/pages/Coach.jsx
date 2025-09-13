@@ -172,7 +172,7 @@ const Coach = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <div className="flex h-screen bg-gray-900">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -180,36 +180,36 @@ const Coach = () => {
       />
       <div className="flex flex-col flex-1 lg:ml-0">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-6 py-4">
+        <div className="bg-gray-800/90 backdrop-blur-sm border-b border-gray-700 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <Menu className="w-6 h-6 text-gray-600" />
+                <Menu className="w-6 h-6 text-gray-400" />
               </button>
               <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
                 <Bot className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-2xl font-bold text-white">
                   AI Nutrition Coach
                 </h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   Your personal health companion
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Bookmark className="w-5 h-5 text-gray-600" />
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <Bookmark className="w-5 h-5 text-gray-400" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Share2 className="w-5 h-5 text-gray-600" />
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <Share2 className="w-5 h-5 text-gray-400" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <MoreVertical className="w-5 h-5 text-gray-600" />
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <MoreVertical className="w-5 h-5 text-gray-400" />
               </button>
             </div>
           </div>
@@ -256,18 +256,18 @@ const Coach = () => {
                     className={`px-4 py-3 rounded-2xl max-w-2xl ${
                       message.type === "user"
                         ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
-                        : "bg-white/80 backdrop-blur-sm text-gray-800 shadow-sm border border-gray-100"
+                        : "bg-gray-800/90 backdrop-blur-sm text-white shadow-sm border border-gray-700"
                     }`}
                   >
                     <p className="text-sm leading-relaxed">{message.content}</p>
                   </div>
 
                   <div className="flex items-center mt-1 space-x-2">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {formatTimestamp(message.timestamp)}
                     </span>
                     {message.type === "bot" && (
-                      <button className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                      <button className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
                         <MessageCircle className="w-3 h-3" />
                       </button>
                     )}
@@ -280,7 +280,7 @@ const Coach = () => {
                         <button
                           key={index}
                           onClick={() => handleSuggestionClick(suggestion)}
-                          className="px-3 py-1.5 bg-white/60 backdrop-blur-sm border border-gray-200 rounded-full text-xs text-gray-700 hover:bg-white hover:shadow-sm transition-all duration-200"
+                          className="px-3 py-1.5 bg-gray-700/60 backdrop-blur-sm border border-gray-600 rounded-full text-xs text-gray-300 hover:bg-gray-600 hover:shadow-sm transition-all duration-200"
                         >
                           {suggestion}
                         </button>
@@ -300,7 +300,7 @@ const Coach = () => {
                   <Bot className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl px-4 py-3">
+              <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-2xl px-4 py-3">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div
@@ -320,8 +320,8 @@ const Coach = () => {
 
         {/* Quick Prompts */}
         {messages.length === 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-white/40 backdrop-blur-sm">
-            <p className="text-sm font-medium text-gray-700 mb-3">
+          <div className="px-6 py-4 border-t border-gray-700 bg-gray-800/40 backdrop-blur-sm">
+            <p className="text-sm font-medium text-gray-300 mb-3">
               Quick prompts to get started:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -329,7 +329,7 @@ const Coach = () => {
                 <button
                   key={index}
                   onClick={() => handleQuickPrompt(prompt)}
-                  className="p-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-white hover:shadow-md transition-all duration-200 text-left"
+                  className="p-3 bg-gray-700/80 backdrop-blur-sm border border-gray-600 rounded-lg text-sm text-gray-300 hover:bg-gray-600 hover:shadow-md transition-all duration-200 text-left"
                 >
                   <Sparkles className="w-4 h-4 text-yellow-500 mb-1" />
                   {prompt}
@@ -340,7 +340,7 @@ const Coach = () => {
         )}
 
         {/* Input Area */}
-        <div className="bg-white/80 backdrop-blur-sm border-t border-gray-200 px-6 py-4">
+        <div className="bg-gray-800/90 backdrop-blur-sm border-t border-gray-700 px-6 py-4">
           <div className="flex items-start space-x-3">
             <div className="flex-1">
               <div className="relative">
@@ -356,7 +356,7 @@ const Coach = () => {
                   }}
                   placeholder="Ask me anything about nutrition, workouts, or wellness..."
                   rows={1}
-                  className="w-full px-4 py-3 pr-12 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-800 placeholder-gray-500 overflow-hidden"
+                  className="w-full px-4 py-3 pr-12 bg-gray-700/90 backdrop-blur-sm border border-gray-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-white placeholder-gray-400 overflow-hidden"
                   style={{
                     minHeight: "52px",
                     maxHeight: "120px",
@@ -368,7 +368,7 @@ const Coach = () => {
                   className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors ${
                     isListening
                       ? "bg-red-500 text-white"
-                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                      : "text-gray-400 hover:text-gray-300 hover:bg-gray-600"
                   }`}
                 >
                   {isListening ? (

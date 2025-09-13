@@ -9,8 +9,12 @@ import Coach from "./pages/Coach";
 import MealPlanner from "./pages/MealPlanner";
 import Scanner from "./pages/Scanner";
 import Homepage from "./pages/Homepage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import apiService from "./services/api";
 
 function App() {
+  const isAuthenticated = apiService.isAuthenticated();
+
   return (
     <Router>
       <div className="App">
@@ -18,23 +22,62 @@ function App() {
           {/* Main Login Route */}
           <Route path="/login" element={<Login />} />
 
-          {/* Homepage Route */}
-          <Route path="/homepage" element={<Homepage />} />
+          {/* Protected Routes */}
+          <Route
+            path="/homepage"
+            element={
+              <ProtectedRoute>
+                <Homepage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* AI Coach Route */}
-          <Route path="/ai-coach" element={<Coach />} />
+          <Route
+            path="/ai-coach"
+            element={
+              <ProtectedRoute>
+                <Coach />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Meal Planner Route */}
-          <Route path="/meal-planner" element={<MealPlanner />} />
+          <Route
+            path="/meal-planner"
+            element={
+              <ProtectedRoute>
+                <MealPlanner />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Scanner Route */}
-          <Route path="/scanner" element={<Scanner />} />
+          <Route
+            path="/scanner"
+            element={
+              <ProtectedRoute>
+                <Scanner />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Default route redirects to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Default route - redirect based on authentication */}
+          <Route
+            path="/"
+            element={
+              isAuthenticated ?
+                <Navigate to="/homepage" replace /> :
+                <Navigate to="/login" replace />
+            }
+          />
 
-          {/* Catch all unknown routes and redirect to login */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Catch all unknown routes - redirect based on authentication */}
+          <Route
+            path="*"
+            element={
+              isAuthenticated ?
+                <Navigate to="/homepage" replace /> :
+                <Navigate to="/login" replace />
+            }
+          />
         </Routes>
       </div>
     </Router>

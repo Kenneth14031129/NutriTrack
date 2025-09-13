@@ -51,6 +51,25 @@ const MealPlanner = () => {
       setPlannedMeals(response.mealPlan || {});
     } catch (error) {
       console.error("Error loading weekly meals:", error);
+
+      // Check different types of errors
+      if (error.message.includes("Failed to fetch")) {
+        console.error(
+          "Backend server connection failed. Please ensure the backend is running on http://localhost:5000"
+        );
+        alert(
+          "Cannot connect to server. Please ensure the backend is running."
+        );
+      } else if (
+        error.message.includes("401") ||
+        error.message.includes("token")
+      ) {
+        console.error("Authentication error:", error);
+        alert("Please log in to access your meal planner.");
+      } else {
+        console.error("API Error:", error);
+        alert("Error loading meals: " + error.message);
+      }
       setPlannedMeals({});
     } finally {
       setLoading(false);
@@ -109,8 +128,20 @@ const MealPlanner = () => {
 
     try {
       const mealData = {
-        ...mealForm,
+        name: mealForm.name,
+        type: mealForm.type,
         date: selectedDate.toISOString().split("T")[0],
+        plannedTime: mealForm.plannedTime,
+        notes: mealForm.notes,
+        totalNutrition: {
+          calories: parseFloat(mealForm.calories) || 0,
+          protein: parseFloat(mealForm.protein) || 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
+          sugar: 0,
+          sodium: 0,
+        },
       };
 
       if (apiService.isAuthenticated()) {
@@ -123,14 +154,6 @@ const MealPlanner = () => {
         const newMeal = {
           _id: Date.now().toString(),
           ...mealData,
-          calories: parseFloat(mealForm.calories) || 0,
-          protein: parseFloat(mealForm.protein) || 0,
-          totalNutrition: { 
-            calories: parseFloat(mealForm.calories) || 0, 
-            protein: parseFloat(mealForm.protein) || 0, 
-            carbs: 25, 
-            fat: 12 
-          },
           status: "planned",
         };
 
@@ -163,6 +186,7 @@ const MealPlanner = () => {
       setShowMealModal(false);
     } catch (error) {
       console.error("Error creating meal:", error);
+      alert("Error creating meal: " + error.message);
     }
   };
 
@@ -207,7 +231,6 @@ const MealPlanner = () => {
     }
   };
 
-
   const getDayTotals = (date) => {
     const meals = getMealsForDate(date);
     const allMeals = [
@@ -219,10 +242,13 @@ const MealPlanner = () => {
 
     return allMeals.reduce(
       (totals, meal) => ({
-        calories: totals.calories + meal.calories,
-        protein: totals.protein + meal.protein,
-        carbs: totals.carbs + meal.carbs,
-        fat: totals.fat + meal.fat,
+        calories:
+          totals.calories +
+          (meal.totalNutrition?.calories || meal.calories || 0),
+        protein:
+          totals.protein + (meal.totalNutrition?.protein || meal.protein || 0),
+        carbs: totals.carbs + (meal.totalNutrition?.carbs || meal.carbs || 0),
+        fat: totals.fat + (meal.totalNutrition?.fat || meal.fat || 0),
       }),
       { calories: 0, protein: 0, carbs: 0, fat: 0 }
     );
@@ -258,7 +284,6 @@ const MealPlanner = () => {
                 </p>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -298,106 +323,88 @@ const MealPlanner = () => {
           </div>
 
           {/* Week View */}
-          <div className="grid grid-cols-7 gap-4">
-              {weekDays.map((day, index) => {
-                const meals = getMealsForDate(day);
-                const totals = getDayTotals(day);
-                const isToday =
-                  day.toDateString() === new Date().toDateString();
+          <div className="grid grid-cols-7 gap-4 items-start">
+            {weekDays.map((day, index) => {
+              const meals = getMealsForDate(day);
+              const totals = getDayTotals(day);
+              const isToday = day.toDateString() === new Date().toDateString();
 
-                return (
-                  <div
-                    key={index}
-                    onClick={() => {
-                      setSelectedDayForModal(day);
-                      setShowDayModal(true);
-                    }}
-                    className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 cursor-pointer hover:bg-gray-750 transition-colors ${
-                      isToday ? "ring-2 ring-green-500" : ""
-                    }`}
-                  >
-                    <div className="text-center mb-4">
-                      <div className="font-medium text-white">
-                        {day.toLocaleDateString("en-US", { weekday: "short" })}
-                      </div>
-                      <div
-                        className={`text-sm ${
-                          isToday
-                            ? "text-green-400 font-medium"
-                            : "text-gray-400"
-                        }`}
-                      >
-                        {day.getDate()}
-                      </div>
+              return (
+                <div
+                  key={index}
+                  onClick={() => {
+                    setSelectedDayForModal(day);
+                    setShowDayModal(true);
+                  }}
+                  className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 cursor-pointer hover:bg-gray-750 transition-colors ${
+                    isToday ? "ring-2 ring-green-500" : ""
+                  }`}
+                >
+                  <div className="text-center mb-4">
+                    <div className="font-medium text-white">
+                      {day.toLocaleDateString("en-US", { weekday: "short" })}
                     </div>
+                    <div
+                      className={`text-sm ${
+                        isToday ? "text-green-400 font-medium" : "text-gray-400"
+                      }`}
+                    >
+                      {day.getDate()}
+                    </div>
+                  </div>
 
-                    <div className="space-y-3">
-                      {mealTypes.map((mealType) => (
-                        <div
-                          key={mealType.id}
-                          className="border-b border-gray-700 last:border-b-0 pb-2"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="text-xs font-medium text-gray-300 flex items-center gap-1">
-                              <span>{mealType.icon}</span>
-                              {mealType.label}
-                            </div>
-                            {day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedDate(day);
-                                  setMealForm((prev) => ({
-                                    ...prev,
-                                    type: mealType.id,
-                                  }));
-                                  setShowMealModal(true);
-                                }}
-                                className="text-green-400 hover:bg-green-500/20 p-1 rounded transition-colors"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            )}
+                  <div className="space-y-3">
+                    {mealTypes.map((mealType) => (
+                      <div
+                        key={mealType.id}
+                        className="border-b border-gray-700 last:border-b-0 pb-2"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-xs font-medium text-gray-300 flex items-center gap-1">
+                            <span>{mealType.icon}</span>
+                            {mealType.label}
                           </div>
+                          {day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDate(day);
+                                setMealForm((prev) => ({
+                                  ...prev,
+                                  type: mealType.id,
+                                }));
+                                setShowMealModal(true);
+                              }}
+                              className="text-green-400 hover:bg-green-500/20 p-1 rounded transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
 
-                          <div className="space-y-1">
-                            {meals[mealType.id]?.map((meal) => (
-                              <div
-                                key={meal._id || meal.id}
-                                className={`text-xs rounded p-2 flex items-center justify-between transition-colors ${
-                                  meal.status === "consumed"
-                                    ? "bg-green-500/20 border border-green-500/30"
-                                    : meal.status === "prepared"
-                                    ? "bg-blue-500/20 border border-blue-500/30"
-                                    : "bg-gray-700 border border-gray-600"
-                                }`}
-                              >
-                                <div className="flex-1">
-                                  <div className="font-medium text-white">{meal.name}</div>
-                                  <div className="text-gray-300">
-                                    {meal.totalNutrition?.calories ||
-                                      meal.calories ||
-                                      0}{" "}
-                                    cal
-                                    {meal.totalNutrition && (
-                                      <span className="ml-2">
-                                        P:{" "}
-                                        {Math.round(
-                                          meal.totalNutrition.protein || 0
-                                        )}
-                                        g
-                                      </span>
-                                    )}
-                                  </div>
-                                  {meal.plannedTime && (
-                                    <div className="text-gray-400 text-xs mt-1">
-                                      <Clock className="w-3 h-3 inline mr-1" />
-                                      {meal.plannedTime}
-                                    </div>
-                                  )}
+                        <div className="space-y-1">
+                          {meals[mealType.id]?.map((meal) => (
+                            <div
+                              key={meal._id || meal.id}
+                              className={`text-xs rounded p-2 flex items-center justify-between transition-colors ${
+                                meal.status === "consumed"
+                                  ? "bg-green-500/20 border border-green-500/30"
+                                  : meal.status === "prepared"
+                                  ? "bg-blue-500/20 border border-blue-500/30"
+                                  : "bg-gray-700 border border-gray-600"
+                              }`}
+                            >
+                              <div className="flex-1">
+                                <div className="font-medium text-white">
+                                  {meal.name}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  {meal.status !== "consumed" && day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {meal.status !== "consumed" &&
+                                  day >=
+                                    new Date(
+                                      new Date().setHours(0, 0, 0, 0)
+                                    ) && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -412,55 +419,62 @@ const MealPlanner = () => {
                                       <Check className="w-3 h-3" />
                                     </button>
                                   )}
-                                  {day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteMeal(
-                                          meal._id || meal.id,
-                                          day,
-                                          mealType.id
-                                        );
-                                      }}
-                                      className="text-red-400 hover:bg-red-500/20 p-1 rounded transition-colors"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                </div>
+                                {day >=
+                                  new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteMeal(
+                                        meal._id || meal.id,
+                                        day,
+                                        mealType.id
+                                      );
+                                    }}
+                                    className="text-red-400 hover:bg-red-500/20 p-1 rounded transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
 
-                    {/* Daily Totals */}
-                    <div className="mt-4 pt-3 border-t border-gray-700">
-                      <div className="text-xs text-gray-300 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Calories:</span>
-                          <span className="font-medium text-white">{totals.calories}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Protein:</span>
-                          <span className="font-medium text-white">{totals.protein}g</span>
-                        </div>
+                  {/* Daily Totals */}
+                  <div className="mt-4 pt-3 border-t border-gray-700">
+                    <div className="text-xs text-gray-300 space-y-1">
+                      <div className="flex justify-between">
+                        <span>Calories:</span>
+                        <span className="font-medium text-white">
+                          {totals.calories}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Protein:</span>
+                        <span className="font-medium text-white">
+                          {totals.protein}g
+                        </span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Add Meal Modal */}
-          {showMealModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
+        {/* Add Meal Modal */}
+        {showMealModal && (
+          <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
               <div className="p-6 border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-white">Create New Meal</h3>
+                  <h3 className="text-xl font-semibold text-white">
+                    Create New Meal
+                  </h3>
                   <button
                     onClick={() => setShowMealModal(false)}
                     className="text-gray-400 hover:text-gray-200 transition-colors"
@@ -587,7 +601,6 @@ const MealPlanner = () => {
                   </div>
                 </div>
 
-
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Notes (optional)
@@ -629,7 +642,7 @@ const MealPlanner = () => {
 
         {/* Day Detail Modal */}
         {showDayModal && selectedDayForModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
               <div className="p-6 border-b border-gray-700">
                 <div className="flex items-center justify-between">
@@ -658,27 +671,39 @@ const MealPlanner = () => {
                 {(() => {
                   const dayMeals = getMealsForDate(selectedDayForModal);
                   const dayTotals = getDayTotals(selectedDayForModal);
-                  
+
                   return (
                     <div className="space-y-6">
                       {/* Daily Summary */}
                       <div className="bg-gray-700 rounded-lg p-4">
-                        <h4 className="text-lg font-medium text-white mb-3">Daily Summary</h4>
+                        <h4 className="text-lg font-medium text-white mb-3">
+                          Daily Summary
+                        </h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-green-400">{dayTotals.calories}</div>
-                            <div className="text-sm text-gray-300">Calories</div>
+                            <div className="text-2xl font-bold text-green-400">
+                              {dayTotals.calories}
+                            </div>
+                            <div className="text-sm text-gray-300">
+                              Calories
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-400">{dayTotals.protein}g</div>
+                            <div className="text-2xl font-bold text-blue-400">
+                              {dayTotals.protein}g
+                            </div>
                             <div className="text-sm text-gray-300">Protein</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-yellow-400">{dayTotals.carbs}g</div>
+                            <div className="text-2xl font-bold text-yellow-400">
+                              {dayTotals.carbs}g
+                            </div>
                             <div className="text-sm text-gray-300">Carbs</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-red-400">{dayTotals.fat}g</div>
+                            <div className="text-2xl font-bold text-red-400">
+                              {dayTotals.fat}g
+                            </div>
                             <div className="text-sm text-gray-300">Fat</div>
                           </div>
                         </div>
@@ -689,14 +714,22 @@ const MealPlanner = () => {
                         {mealTypes.map((mealType) => {
                           const meals = dayMeals[mealType.id] || [];
                           return (
-                            <div key={mealType.id} className="bg-gray-700 rounded-lg p-4">
+                            <div
+                              key={mealType.id}
+                              className="bg-gray-700 rounded-lg p-4"
+                            >
                               <div className="flex items-center justify-between mb-3">
                                 <h5 className="text-lg font-medium text-white flex items-center gap-2">
-                                  <span className="text-xl">{mealType.icon}</span>
+                                  <span className="text-xl">
+                                    {mealType.icon}
+                                  </span>
                                   {mealType.label}
-                                  <span className="text-sm text-gray-400">({mealType.time})</span>
+                                  <span className="text-sm text-gray-400">
+                                    ({mealType.time})
+                                  </span>
                                 </h5>
-                                {selectedDayForModal >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                {selectedDayForModal >=
+                                  new Date(new Date().setHours(0, 0, 0, 0)) && (
                                   <button
                                     onClick={() => {
                                       setSelectedDate(selectedDayForModal);
@@ -717,7 +750,8 @@ const MealPlanner = () => {
 
                               {meals.length === 0 ? (
                                 <div className="text-gray-400 text-center py-4">
-                                  No meals planned for {mealType.label.toLowerCase()}
+                                  No meals planned for{" "}
+                                  {mealType.label.toLowerCase()}
                                 </div>
                               ) : (
                                 <div className="space-y-2">
@@ -735,7 +769,9 @@ const MealPlanner = () => {
                                       <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
-                                            <h6 className="font-medium text-white">{meal.name}</h6>
+                                            <h6 className="font-medium text-white">
+                                              {meal.name}
+                                            </h6>
                                             {meal.status === "consumed" && (
                                               <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
                                                 Consumed
@@ -747,15 +783,25 @@ const MealPlanner = () => {
                                               </span>
                                             )}
                                           </div>
-                                          
+
                                           <div className="text-sm text-gray-300 mt-1">
                                             <div className="flex items-center gap-4">
                                               <span>
-                                                {meal.totalNutrition?.calories || meal.calories || 0} cal
+                                                {meal.totalNutrition
+                                                  ?.calories ||
+                                                  meal.calories ||
+                                                  0}{" "}
+                                                cal
                                               </span>
-                                              {meal.totalNutrition?.protein || meal.protein ? (
+                                              {meal.totalNutrition?.protein ||
+                                              meal.protein ? (
                                                 <span>
-                                                  Protein: {Math.round(meal.totalNutrition?.protein || meal.protein)}g
+                                                  Protein:{" "}
+                                                  {Math.round(
+                                                    meal.totalNutrition
+                                                      ?.protein || meal.protein
+                                                  )}
+                                                  g
                                                 </span>
                                               ) : null}
                                               {meal.plannedTime && (
@@ -775,21 +821,28 @@ const MealPlanner = () => {
                                         </div>
 
                                         <div className="flex items-center gap-2 ml-4">
-                                          {meal.status !== "consumed" && selectedDayForModal >= new Date(new Date().setHours(0, 0, 0, 0)) && (
-                                            <button
-                                              onClick={() =>
-                                                handleUpdateMealStatus(
-                                                  meal._id || meal.id,
-                                                  "consumed"
-                                                )
-                                              }
-                                              className="text-green-400 hover:bg-green-500/20 p-2 rounded transition-colors"
-                                              title="Mark as consumed"
-                                            >
-                                              <Check className="w-4 h-4" />
-                                            </button>
-                                          )}
-                                          {selectedDayForModal >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                                          {meal.status !== "consumed" &&
+                                            selectedDayForModal >=
+                                              new Date(
+                                                new Date().setHours(0, 0, 0, 0)
+                                              ) && (
+                                              <button
+                                                onClick={() =>
+                                                  handleUpdateMealStatus(
+                                                    meal._id || meal.id,
+                                                    "consumed"
+                                                  )
+                                                }
+                                                className="text-green-400 hover:bg-green-500/20 p-2 rounded transition-colors"
+                                                title="Mark as consumed"
+                                              >
+                                                <Check className="w-4 h-4" />
+                                              </button>
+                                            )}
+                                          {selectedDayForModal >=
+                                            new Date(
+                                              new Date().setHours(0, 0, 0, 0)
+                                            ) && (
                                             <button
                                               onClick={() =>
                                                 handleDeleteMeal(
