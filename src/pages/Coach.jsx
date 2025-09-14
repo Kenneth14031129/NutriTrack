@@ -4,42 +4,23 @@ import {
   Send,
   Mic,
   MicOff,
-  Lightbulb,
-  Target,
-  TrendingUp,
-  Heart,
-  Apple,
-  Activity,
-  Calendar,
-  Award,
   MessageCircle,
   Sparkles,
   User,
-  ChevronDown,
-  Clock,
   Bookmark,
   Share2,
   MoreVertical,
   Menu,
+  Trash2,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import geminiService from "../services/geminiService";
+import chatService from "../services/chatService";
+import apiService from "../services/api";
 
 const Coach = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: "bot",
-      content:
-        "Hi there! I'm your AI nutrition coach. I'm here to help you achieve your health goals. What would you like to discuss today?",
-      timestamp: new Date(Date.now() - 5 * 60000),
-      suggestions: [
-        "My daily nutrition",
-        "Meal planning help",
-        "Weight loss tips",
-        "Workout recommendations",
-      ],
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -56,25 +37,101 @@ const Coach = () => {
     "How can I improve my metabolism?",
   ];
 
+  // Load chat on component mount
+  useEffect(() => {
+    loadActiveChat();
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  const loadActiveChat = async () => {
+    try {
+      const token = sessionStorage.getItem("authToken");
+
+      if (!apiService.isAuthenticated() || !token) {
+        // Use fallback localStorage messages for unauthenticated users
+        setMessages(chatService.getFallbackMessages());
+        return;
+      }
+
+      chatService.setToken(token);
+
+      // Load active chat from database
+      const response = await chatService.getActiveChat();
+      if (response.success) {
+        // Convert timestamp strings to Date objects
+        const messagesWithDates = (response.data.messages || []).map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(messagesWithDates);
+        setCurrentSessionId(response.data.sessionId);
+      }
+    } catch (error) {
+      console.error("Failed to load chat:", error);
+      // Fallback to localStorage
+      setMessages(chatService.getFallbackMessages());
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const clearChat = async () => {
+    try {
+      if (apiService.isAuthenticated() && currentSessionId) {
+        const response = await chatService.clearChat(currentSessionId);
+        if (response.success) {
+          // Convert timestamp strings to Date objects
+          const messagesWithDates = (response.data.messages || []).map(
+            (msg) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            })
+          );
+          setMessages(messagesWithDates);
+        }
+      } else {
+        // Clear localStorage fallback
+        const defaultMessages = [
+          {
+            id: Date.now().toString(),
+            type: "bot",
+            content:
+              "Hi there! I'm your AI nutrition coach. I'm here to help you achieve your health goals. What would you like to discuss today?",
+            timestamp: new Date(),
+            suggestions: [
+              "My daily nutrition",
+              "Meal planning help",
+              "Weight loss tips",
+              "Workout recommendations",
+            ],
+          },
+        ];
+        setMessages(defaultMessages);
+        chatService.saveFallbackMessages(defaultMessages);
+      }
+    } catch (error) {
+      console.error("Failed to clear chat:", error);
+    }
   };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
     const userMessage = {
-      id: Date.now(),
+      id: Date.now().toString(),
       type: "user",
       content: inputMessage,
       timestamp: new Date(),
     };
 
+    // Add user message to UI immediately
     setMessages((prev) => [...prev, userMessage]);
+    const currentMessage = inputMessage;
     setInputMessage("");
     setIsLoading(true);
 
@@ -83,64 +140,59 @@ const Coach = () => {
       inputRef.current.style.height = "52px";
     }
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Save user message to database if authenticated
+      if (apiService.isAuthenticated() && currentSessionId) {
+        await chatService.addMessage(currentSessionId, userMessage);
+      } else {
+        // Save to localStorage fallback
+        const updatedMessages = [...messages, userMessage];
+        chatService.saveFallbackMessages(updatedMessages);
+      }
+
+      // Get AI response from Gemini
+      const aiResponse = await geminiService.generateResponse(currentMessage);
+
       const botResponse = {
-        id: Date.now() + 1,
+        id: (Date.now() + 1).toString(),
         type: "bot",
-        content: generateAIResponse(inputMessage),
+        content: aiResponse.content,
         timestamp: new Date(),
-        suggestions: generateSuggestions(inputMessage),
+        suggestions: aiResponse.suggestions,
       };
+
+      // Add bot response to UI
       setMessages((prev) => [...prev, botResponse]);
+
+      // Save bot response to database if authenticated
+      if (apiService.isAuthenticated() && currentSessionId) {
+        await chatService.addMessage(currentSessionId, botResponse);
+      } else {
+        // Save to localStorage fallback
+        const updatedMessages = [...messages, userMessage, botResponse];
+        chatService.saveFallbackMessages(updatedMessages);
+      }
+    } catch (error) {
+      console.error("Error in message handling:", error);
+
+      // Fallback response if anything fails
+      const fallbackResponse = {
+        id: (Date.now() + 1).toString(),
+        type: "bot",
+        content:
+          "I apologize, but I'm experiencing some technical difficulties right now. Please try again in a moment, or feel free to ask your question in a different way.",
+        timestamp: new Date(),
+        suggestions: ["Try again", "Ask differently", "Contact support"],
+      };
+
+      setMessages((prev) => [...prev, fallbackResponse]);
+    } finally {
       setIsLoading(false);
-    }, 1000 + Math.random() * 2000);
-  };
-
-  const generateAIResponse = (input) => {
-    const responses = {
-      nutrition:
-        "Based on your current goals, I recommend focusing on whole foods with a good balance of proteins, healthy fats, and complex carbohydrates. Would you like me to create a personalized meal plan for you?",
-      workout:
-        "Great question! For optimal results, I suggest combining cardiovascular exercise with strength training. Let's design a workout plan that fits your schedule and fitness level.",
-      weight:
-        "Weight management is about creating a sustainable caloric deficit while maintaining proper nutrition. I can help you calculate your daily caloric needs and suggest meal timing strategies.",
-      meal: "Meal planning is key to success! I recommend preparing your meals 2-3 days in advance and focusing on nutrient-dense foods. Would you like some specific recipe suggestions?",
-      default:
-        "That's an interesting question! Let me provide you with some personalized advice based on your profile and goals. I'm here to help you make informed decisions about your health and nutrition.",
-    };
-
-    const lowerInput = input.toLowerCase();
-    if (lowerInput.includes("nutrition") || lowerInput.includes("eat"))
-      return responses.nutrition;
-    if (lowerInput.includes("workout") || lowerInput.includes("exercise"))
-      return responses.workout;
-    if (lowerInput.includes("weight") || lowerInput.includes("lose"))
-      return responses.weight;
-    if (lowerInput.includes("meal") || lowerInput.includes("plan"))
-      return responses.meal;
-    return responses.default;
-  };
-
-  const generateSuggestions = () => {
-    const suggestions = [
-      "Tell me more about this",
-      "Create a detailed plan",
-      "Show me examples",
-      "Track my progress",
-    ];
-    return suggestions.slice(0, Math.floor(Math.random() * 3) + 2);
+    }
   };
 
   const handleQuickPrompt = (prompt) => {
     setInputMessage(prompt);
-    inputRef.current?.focus();
-    // Trigger resize after setting the message
-    setTimeout(() => adjustTextareaHeight(), 0);
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    setInputMessage(suggestion);
     inputRef.current?.focus();
     // Trigger resize after setting the message
     setTimeout(() => adjustTextareaHeight(), 0);
@@ -165,7 +217,9 @@ const Coach = () => {
   };
 
   const formatTimestamp = (timestamp) => {
-    return timestamp.toLocaleTimeString([], {
+    // Handle both Date objects and string timestamps from database
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    return date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -202,6 +256,13 @@ const Coach = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              <button
+                onClick={clearChat}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                title="Clear chat history"
+              >
+                <Trash2 className="w-5 h-5 text-gray-400" />
+              </button>
               <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
                 <Bookmark className="w-5 h-5 text-gray-400" />
               </button>
@@ -272,21 +333,6 @@ const Coach = () => {
                       </button>
                     )}
                   </div>
-
-                  {/* Suggestions */}
-                  {message.suggestions && message.suggestions.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {message.suggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="px-3 py-1.5 bg-gray-700/60 backdrop-blur-sm border border-gray-600 rounded-full text-xs text-gray-300 hover:bg-gray-600 hover:shadow-sm transition-all duration-200"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

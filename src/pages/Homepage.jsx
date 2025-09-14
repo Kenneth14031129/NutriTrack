@@ -48,20 +48,58 @@ const Homepage = () => {
       if (hasCheckedGoals) return; // Don't check again if already checked
 
       try {
-        // Check for existing goals for today first
+        // First check localStorage for existing goals (this is more reliable)
         const dateKey = new Date().toDateString();
         const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
         const goalsData = JSON.parse(savedGoalsData);
 
         if (goalsData[dateKey]) {
           // Goals exist for today, load them
+          console.log("Loading goals from localStorage:", goalsData[dateKey]);
           setDailyGoals(goalsData[dateKey].goals);
           setGoalProgress(goalsData[dateKey].progress || {});
           setHasCheckedGoals(true);
           return;
         }
 
-        // No goals for today, show goal setup
+        // If no localStorage goals and user is authenticated, try database
+        if (apiService.isAuthenticated()) {
+          try {
+            console.log("No localStorage goals found, trying database...");
+            const response = await apiService.getCurrentGoals();
+            if (response && response.goals) {
+              console.log("Found goals in database:", response.goals);
+              setDailyGoals(response.goals);
+
+              // Save to localStorage for faster access
+              goalsData[dateKey] = {
+                goals: response.goals,
+                progress: {}
+              };
+              localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
+
+              // Try to load progress from database if available
+              try {
+                const progressResponse = await apiService.getTodayProgress();
+                if (progressResponse) {
+                  setGoalProgress(progressResponse);
+                  goalsData[dateKey].progress = progressResponse;
+                  localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
+                }
+              } catch (progressError) {
+                console.log("No progress found in database");
+              }
+
+              setHasCheckedGoals(true);
+              return;
+            }
+          } catch (error) {
+            console.log("No goals found in database:", error.message);
+          }
+        }
+
+        // No goals found anywhere, show goal setup
+        console.log("No goals found, showing setup");
         setShowGoalSetup(true);
         setHasCheckedGoals(true);
       } catch (error) {
@@ -177,26 +215,42 @@ const Homepage = () => {
           },
         };
 
+        const dateKey = new Date().toDateString();
+
         if (apiService.isAuthenticated()) {
+          console.log("Saving goals to database:", goalsData);
           const response = await apiService.createGoals(goalsData);
+          console.log("Goals saved successfully:", response);
+
+          // Set the goals from the response
           setDailyGoals(response.goals);
+
+          // Also save to localStorage for faster access on refresh
+          const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
+          const localGoalsData = JSON.parse(savedGoalsData);
+          localGoalsData[dateKey] = { goals: response.goals, progress: {} };
+          localStorage.setItem("dailyGoalsData", JSON.stringify(localGoalsData));
+
         } else {
-          // Fallback to localStorage for demo with date-based storage
-          const dateKey = new Date().toDateString();
+          // Fallback to localStorage for unauthenticated users
           const goals = { ...goalSetupData, date: dateKey };
           setDailyGoals(goals);
 
           // Update date-based storage
           const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
-          const goalsData = JSON.parse(savedGoalsData);
-          goalsData[dateKey] = { goals, progress: {} };
-          localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
+          const localGoalsData = JSON.parse(savedGoalsData);
+          localGoalsData[dateKey] = { goals, progress: {} };
+          localStorage.setItem("dailyGoalsData", JSON.stringify(localGoalsData));
         }
 
         setShowGoalSetup(false);
         setCurrentStep(0);
       } catch (error) {
-        console.error("Error saving goals:", error);
+        console.error("Error saving goals to database:", error);
+
+        // Show a user-friendly alert about the issue
+        alert("There was an issue saving your goals to the database. Your goals have been saved locally for this session, but they may not persist after logout. Please try setting your goals again later.");
+
         // Fallback to localStorage with date-based storage
         const dateKey = new Date().toDateString();
         const goals = { ...goalSetupData, date: dateKey };

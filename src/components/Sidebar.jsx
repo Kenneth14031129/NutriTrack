@@ -4,9 +4,7 @@ import apiService from "../services/api";
 import {
   Settings,
   ChevronRight,
-  Scan,
   Bot,
-  User,
   Shield,
   ChefHat,
   Home,
@@ -27,13 +25,6 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
       badge: null,
     },
     {
-      id: "scanner",
-      label: "Scanner",
-      icon: Scan,
-      href: "/scanner",
-      badge: "New",
-    },
-    {
       id: "meal-planner",
       label: "Meal Planner",
       icon: ChefHat,
@@ -48,7 +39,7 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
       label: "AI Coach",
       icon: Bot,
       href: "/ai-coach",
-      badge: "3",
+      badge: null,
     },
   ];
 

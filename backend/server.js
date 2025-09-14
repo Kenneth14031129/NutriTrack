@@ -54,6 +54,7 @@ app.use('/api/progress', require('./routes/progress'));
 app.use('/api/meals', require('./routes/meals'));
 app.use('/api/foods', require('./routes/foods'));
 app.use('/api/scanner', require('./routes/scanner'));
+app.use('/api/chat', require('./routes/chat'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
