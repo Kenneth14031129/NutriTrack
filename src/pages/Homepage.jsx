@@ -62,8 +62,11 @@ const Homepage = () => {
               // Try to load progress from database if available
               try {
                 const progressResponse = await apiService.getTodayProgress();
-                if (progressResponse) {
-                  setGoalProgress(progressResponse);
+                if (progressResponse && progressResponse.progress) {
+                  // Extract the actual progress data from the response
+                  const currentProgress = progressResponse.progress.current || {};
+                  console.log("Loaded progress from database:", currentProgress);
+                  setGoalProgress(currentProgress);
                 }
               } catch (progressError) {
                 console.log("No progress found in database");
@@ -271,9 +274,17 @@ const Homepage = () => {
     }
 
     try {
-      await apiService.updateProgress(goalType, value, "set");
+      const response = await apiService.updateProgress(goalType, value, "set");
+      console.log("Progress update response:", response);
+
+      // Update local state with the new value
       const newProgress = { ...goalProgress, [goalType]: value };
       setGoalProgress(newProgress);
+
+      // Optionally, update with the actual response from server
+      if (response && response.progress && response.progress.current) {
+        setGoalProgress(response.progress.current);
+      }
     } catch (error) {
       console.error("Error updating progress:", error);
       alert("Failed to update progress. Please check your connection and try again.");

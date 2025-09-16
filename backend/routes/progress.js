@@ -328,6 +328,46 @@ router.get('/range/:startDate/:endDate', async (req, res) => {
   }
 });
 
+// @route   DELETE /api/progress/today
+// @desc    Delete today's progress for user
+// @access  Private
+router.delete('/today', async (req, res) => {
+  try {
+    // Get user's current goals
+    const goals = await Goal.getCurrentGoals(req.user.userId);
+    if (!goals) {
+      return res.status(404).json({
+        message: 'No goals found for today.'
+      });
+    }
+
+    // Get today's progress
+    const today = new Date();
+    const progress = await Progress.findOne({
+      userId: req.user.userId,
+      goalId: goals._id,
+      date: {
+        $gte: new Date(today).setHours(0, 0, 0, 0),
+        $lt: new Date(today).setHours(23, 59, 59, 999)
+      }
+    });
+
+    if (!progress) {
+      return res.status(404).json({ message: 'No progress found for today' });
+    }
+
+    await Progress.deleteOne({ _id: progress._id });
+
+    res.json({
+      message: 'Today\'s progress deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Today progress delete error:', error);
+    res.status(500).json({ message: 'Server error deleting today\'s progress' });
+  }
+});
+
 // @route   GET /api/progress/stats/weekly
 // @desc    Get weekly progress statistics
 // @access  Private
