@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Home,
   Target,
-  Plus,
-  Edit3,
   Check,
   Zap,
   Menu,
@@ -13,7 +11,6 @@ import {
   Droplets,
   Moon,
   Dumbbell,
-  X,
   RotateCcw,
   AlertTriangle,
 } from "lucide-react";
@@ -74,7 +71,7 @@ const Homepage = () => {
               // Save to localStorage for faster access
               goalsData[dateKey] = {
                 goals: response.goals,
-                progress: {}
+                progress: {},
               };
               localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
 
@@ -84,7 +81,10 @@ const Homepage = () => {
                 if (progressResponse) {
                   setGoalProgress(progressResponse);
                   goalsData[dateKey].progress = progressResponse;
-                  localStorage.setItem("dailyGoalsData", JSON.stringify(goalsData));
+                  localStorage.setItem(
+                    "dailyGoalsData",
+                    JSON.stringify(goalsData)
+                  );
                 }
               } catch (progressError) {
                 console.log("No progress found in database");
@@ -229,8 +229,10 @@ const Homepage = () => {
           const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
           const localGoalsData = JSON.parse(savedGoalsData);
           localGoalsData[dateKey] = { goals: response.goals, progress: {} };
-          localStorage.setItem("dailyGoalsData", JSON.stringify(localGoalsData));
-
+          localStorage.setItem(
+            "dailyGoalsData",
+            JSON.stringify(localGoalsData)
+          );
         } else {
           // Fallback to localStorage for unauthenticated users
           const goals = { ...goalSetupData, date: dateKey };
@@ -240,7 +242,10 @@ const Homepage = () => {
           const savedGoalsData = localStorage.getItem("dailyGoalsData") || "{}";
           const localGoalsData = JSON.parse(savedGoalsData);
           localGoalsData[dateKey] = { goals, progress: {} };
-          localStorage.setItem("dailyGoalsData", JSON.stringify(localGoalsData));
+          localStorage.setItem(
+            "dailyGoalsData",
+            JSON.stringify(localGoalsData)
+          );
         }
 
         setShowGoalSetup(false);
@@ -249,7 +254,9 @@ const Homepage = () => {
         console.error("Error saving goals to database:", error);
 
         // Show a user-friendly alert about the issue
-        alert("There was an issue saving your goals to the database. Your goals have been saved locally for this session, but they may not persist after logout. Please try setting your goals again later.");
+        alert(
+          "There was an issue saving your goals to the database. Your goals have been saved locally for this session, but they may not persist after logout. Please try setting your goals again later."
+        );
 
         // Fallback to localStorage with date-based storage
         const dateKey = new Date().toDateString();
@@ -660,13 +667,7 @@ const Homepage = () => {
                 </h1>
                 <p className="text-gray-400 mt-1 text-sm sm:text-base">
                   <span className="hidden sm:inline">
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}{" "}
-                    - Track your daily progress and stay motivated
+                    Track your daily progress and stay motivated
                   </span>
                   <span className="sm:hidden">
                     {new Date().toLocaleDateString("en-US", {
