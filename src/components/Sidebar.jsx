@@ -9,6 +9,7 @@ import {
   ChefHat,
   Home,
   LogOut,
+  User,
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
@@ -52,6 +53,13 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
   };
 
   const accountItems = [
+    {
+      id: "profile",
+      label: "Profile",
+      icon: User,
+      href: "/profile",
+      badge: null,
+    },
     {
       id: "settings",
       label: "Settings",

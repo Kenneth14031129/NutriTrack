@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import userContextService from './userContextService';
 
 class GeminiService {
   constructor() {
@@ -48,11 +49,11 @@ Key guidelines:
 - Be supportive and motivational
 - Keep responses concise and direct - avoid unnecessary elaboration
 
-User context: ${JSON.stringify(userContext)}
+User context: ${this.formatUserContext(userContext)}
 
 User message: ${userMessage}
 
-Please provide a helpful, personalized response as a nutrition coach:`;
+Please provide a helpful, personalized response as a nutrition coach. Use the user's name if available and reference their specific goals, preferences, and restrictions when relevant:`;
 
       const result = await this.model.generateContent(systemPrompt);
       const response = await result.response;
@@ -96,6 +97,20 @@ Please provide a helpful, personalized response as a nutrition coach:`;
       content,
       suggestions: this.generateSuggestions(userMessage, content),
     };
+  }
+
+  formatUserContext(userContext) {
+    if (!userContext) {
+      return 'No user context available - provide general nutrition advice.';
+    }
+
+    const contextSummary = userContextService.getContextSummary(userContext);
+
+    if (!contextSummary) {
+      return 'Limited user context - provide general nutrition advice.';
+    }
+
+    return contextSummary;
   }
 
   generateSuggestions(userMessage, response) {

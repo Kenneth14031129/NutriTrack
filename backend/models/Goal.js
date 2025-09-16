@@ -164,11 +164,18 @@ goalSchema.statics.getGoalsForDate = async function(userId, date) {
 // Static method to get user's current goals
 goalSchema.statics.getCurrentGoals = async function(userId) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
+  const startOfDay = new Date(today);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+
   return await this.findOne({
     userId,
-    date: today,
+    date: {
+      $gte: startOfDay,
+      $lte: endOfDay
+    },
     isActive: true
   });
 };

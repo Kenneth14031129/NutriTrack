@@ -9,6 +9,7 @@ import Coach from "./pages/Coach";
 import MealPlanner from "./pages/MealPlanner";
 import Scanner from "./pages/Scanner";
 import Homepage from "./pages/Homepage";
+import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import apiService from "./services/api";
 
@@ -55,6 +56,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Scanner />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

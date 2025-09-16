@@ -7,9 +7,6 @@ import {
   MessageCircle,
   Sparkles,
   User,
-  Bookmark,
-  Share2,
-  MoreVertical,
   Menu,
   Trash2,
 } from "lucide-react";
@@ -17,6 +14,7 @@ import Sidebar from "../components/Sidebar";
 import geminiService from "../services/geminiService";
 import chatService from "../services/chatService";
 import apiService from "../services/api";
+import userContextService from "../services/userContextService";
 
 const Coach = () => {
   const [messages, setMessages] = useState([]);
@@ -25,6 +23,7 @@ const Coach = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userContext, setUserContext] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -37,9 +36,10 @@ const Coach = () => {
     "How can I improve my metabolism?",
   ];
 
-  // Load chat on component mount
+  // Load chat and user context on component mount
   useEffect(() => {
     loadActiveChat();
+    loadUserContext();
   }, []);
 
   useEffect(() => {
@@ -73,6 +73,19 @@ const Coach = () => {
       console.error("Failed to load chat:", error);
       // Fallback to localStorage
       setMessages(chatService.getFallbackMessages());
+    }
+  };
+
+  const loadUserContext = async () => {
+    try {
+      if (apiService.isAuthenticated()) {
+        const context = await userContextService.getUserContext();
+        setUserContext(context);
+      }
+    } catch (error) {
+      console.error("Failed to load user context:", error);
+      // Use default context for unauthenticated users
+      setUserContext(userContextService.getDefaultContext());
     }
   };
 
@@ -150,8 +163,11 @@ const Coach = () => {
         chatService.saveFallbackMessages(updatedMessages);
       }
 
-      // Get AI response from Gemini
-      const aiResponse = await geminiService.generateResponse(currentMessage);
+      // Get AI response from Gemini with user context
+      const aiResponse = await geminiService.generateResponse(
+        currentMessage,
+        userContext
+      );
 
       const botResponse = {
         id: (Date.now() + 1).toString(),
@@ -234,43 +250,36 @@ const Coach = () => {
       />
       <div className="flex flex-col flex-1 lg:ml-0">
         {/* Header */}
-        <div className="bg-gray-800/90 backdrop-blur-sm border-b border-gray-700 px-6 py-4">
+        <div className="bg-gray-900 text-white border-b border-gray-800 px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                className="lg:hidden p-2 hover:bg-gray-800 rounded-lg transition-colors"
               >
-                <Menu className="w-6 h-6 text-gray-400" />
+                <Menu className="w-6 h-6 text-gray-300" />
               </button>
-              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Bot className="w-7 h-7 text-white" />
-              </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">
-                  AI Nutrition Coach
+                <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
+                  <Bot className="text-green-400 w-6 h-6 sm:w-8 sm:h-8" />
+                  <span className="hidden sm:inline">AI Nutrition Coach</span>
+                  <span className="sm:hidden">AI Coach</span>
                 </h1>
-                <p className="text-sm text-gray-400">
-                  Your personal health companion
+                <p className="text-gray-400 mt-1 text-sm sm:text-base">
+                  <span className="hidden sm:inline">
+                    Your personal health companion
+                  </span>
+                  <span className="sm:hidden">Health assistant</span>
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={clearChat}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
                 title="Clear chat history"
               >
-                <Trash2 className="w-5 h-5 text-gray-400" />
-              </button>
-              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-                <Bookmark className="w-5 h-5 text-gray-400" />
-              </button>
-              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-                <Share2 className="w-5 h-5 text-gray-400" />
-              </button>
-              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-                <MoreVertical className="w-5 h-5 text-gray-400" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 hover:text-white" />
               </button>
             </div>
           </div>

@@ -32,10 +32,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Create new goals
+    // Create new goals with normalized date (start of day)
+    const goalDate = date ? new Date(date) : new Date();
+    goalDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
     const goals = new Goal({
       userId: req.user.userId,
-      date: date ? new Date(date) : new Date(),
+      date: goalDate,
       targets,
       nutritionalTargets: nutritionalTargets || {},
       customGoals: customGoals || []

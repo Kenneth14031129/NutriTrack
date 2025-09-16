@@ -3,6 +3,7 @@ import { Eye, EyeOff, Mail, Lock, Leaf, Apple, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import apiService from "../services/api";
 import { useToast } from "../components/Toast";
+import NutriBG from "../assets/Nutri_BG.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -121,7 +122,17 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-green-100 relative overflow-hidden">
+    <div
+      className="min-h-screen relative overflow-hidden"
+      style={{
+        backgroundImage: `url(${NutriBG})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Dark overlay for better readability */}
+      <div className="absolute inset-0 bg-black/20"></div>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>

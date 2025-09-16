@@ -91,7 +91,16 @@ class ApiService {
       headers: this.getHeaders(),
       body: JSON.stringify(goalsData)
     });
-    
+
+    return this.handleResponse(response);
+  }
+
+  async deleteCurrentGoals() {
+    const response = await fetch(`${API_BASE_URL}/goals/current`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+
     return this.handleResponse(response);
   }
 
@@ -120,7 +129,16 @@ class ApiService {
       headers: this.getHeaders(),
       body: JSON.stringify(activityData)
     });
-    
+
+    return this.handleResponse(response);
+  }
+
+  async deleteTodayProgress() {
+    const response = await fetch(`${API_BASE_URL}/progress/today`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+
     return this.handleResponse(response);
   }
 
@@ -129,7 +147,26 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/users/dashboard`, {
       headers: this.getHeaders()
     });
-    
+
+    return this.handleResponse(response);
+  }
+
+  // User Profile
+  async getProfile() {
+    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      headers: this.getHeaders()
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async updateProfile(profileData) {
+    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(profileData)
+    });
+
     return this.handleResponse(response);
   }
 
