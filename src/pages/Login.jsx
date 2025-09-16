@@ -82,14 +82,18 @@ const Login = () => {
           email: formData.email,
           password: formData.password,
         });
-        showToast(`Welcome to NutriTrack, ${formData.fullName}! 🎉`, 'success', 5000);
+        showToast(
+          `Welcome to NutriTrack, ${formData.fullName}! 🎉`,
+          "success",
+          5000
+        );
       } else {
         // Login existing user
         await apiService.login({
           email: formData.email,
           password: formData.password,
         });
-        showToast('Welcome back! Login successful 👋', 'success', 4000);
+        showToast("Welcome back! Login successful 👋", "success", 4000);
       }
 
       // Navigate to homepage on success after a short delay
@@ -99,12 +103,15 @@ const Login = () => {
     } catch (error) {
       console.error(`${isSignUp ? "Registration" : "Login"} error:`, error);
       showToast(
-        error.message || `${isSignUp ? "Registration" : "Login"} failed. Please try again.`,
-        'error',
+        error.message ||
+          `${isSignUp ? "Registration" : "Login"} failed. Please try again.`,
+        "error",
         6000
       );
       setErrors({
-        submit: error.message || `${isSignUp ? "Registration" : "Login"} failed. Please try again.`
+        submit:
+          error.message ||
+          `${isSignUp ? "Registration" : "Login"} failed. Please try again.`,
       });
     } finally {
       setIsLoading(false);
@@ -126,36 +133,11 @@ const Login = () => {
       className="min-h-screen relative overflow-hidden"
       style={{
         backgroundImage: `url(${NutriBG})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
-      {/* Dark overlay for better readability */}
-      <div className="absolute inset-0 bg-black/20"></div>
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-green-100 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse animation-delay-4000"></div>
-      </div>
-
-      {/* Floating Health Icons */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-20 text-green-300 animate-bounce">
-          <Leaf className="w-6 h-6" />
-        </div>
-        <div className="absolute top-32 right-32 text-blue-300 animate-bounce animation-delay-1000">
-          <Apple className="w-5 h-5" />
-        </div>
-        <div className="absolute bottom-40 left-32 text-green-400 animate-bounce animation-delay-2000">
-          <Leaf className="w-4 h-4" />
-        </div>
-        <div className="absolute bottom-32 right-20 text-blue-400 animate-bounce animation-delay-3000">
-          <Apple className="w-6 h-6" />
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
@@ -360,7 +342,6 @@ const Login = () => {
                   Forgot password?
                 </a>
               </div>
-
 
               {/* Submit Button */}
               <button
