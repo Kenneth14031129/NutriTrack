@@ -61,7 +61,7 @@ const MealPlanner = () => {
       // Check different types of errors
       if (error.message.includes("Failed to fetch")) {
         console.error(
-          "Backend server connection failed. Please ensure the backend is running on http://localhost:5000"
+          "Backend server connection failed. Please check your internet connection and try again."
         );
         alert(
           "Cannot connect to server. Please ensure the backend is running."
