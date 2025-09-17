@@ -34,7 +34,7 @@ class GeminiService {
       }
     }
 
-    try {
+    return this.makeApiRequestWithRetry(async () => {
       // Create a nutrition-focused prompt
       const systemPrompt = `You are an expert AI nutrition coach and health advisor. Your role is to provide personalized, evidence-based nutrition and wellness guidance.
 
@@ -63,21 +63,7 @@ Please provide a helpful, personalized response as a nutrition coach. Use the us
         content: text,
         suggestions: this.generateSuggestions(userMessage, text),
       };
-    } catch (error) {
-      console.error('Gemini API error:', error);
-
-      // Re-throw rate limiting errors with more specific information
-      if (error.message && (
-        error.message.includes('quota') ||
-        error.message.includes('rate limit') ||
-        error.message.includes('429') ||
-        error.message.includes('Resource exhausted')
-      )) {
-        throw new Error(`Rate limit exceeded: ${error.message}`);
-      }
-
-      return this.getFallbackResponse(userMessage);
-    }
+    }, userMessage);
   }
 
   getFallbackResponse(userMessage) {
@@ -124,6 +110,49 @@ Please provide a helpful, personalized response as a nutrition coach. Use the us
     return contextSummary;
   }
 
+  async makeApiRequestWithRetry(apiCall, userMessage, maxRetries = 3) {
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        return await apiCall();
+      } catch (error) {
+        console.error(`Gemini API error (attempt ${attempt + 1}):`, error);
+
+        // Check if this is a 503 (service unavailable) or overloaded error
+        const isOverloadedError = error.message && (
+          error.message.includes('503') ||
+          error.message.includes('overloaded') ||
+          error.message.includes('Service Unavailable') ||
+          error.message.includes('The model is overloaded')
+        );
+
+        // Check for rate limiting errors
+        const isRateLimitError = error.message && (
+          error.message.includes('quota') ||
+          error.message.includes('rate limit') ||
+          error.message.includes('429') ||
+          error.message.includes('Resource exhausted')
+        );
+
+        // If it's the last attempt or not a retryable error, handle accordingly
+        if (attempt === maxRetries - 1 || (!isOverloadedError && !isRateLimitError)) {
+          if (isRateLimitError) {
+            throw new Error(`Rate limit exceeded: ${error.message}`);
+          }
+          return this.getFallbackResponse(userMessage);
+        }
+
+        // Calculate exponential backoff delay (1s, 2s, 4s)
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Retrying in ${delay}ms due to ${isOverloadedError ? 'service overload' : 'rate limit'}...`);
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+        attempt++;
+      }
+    }
+  }
+
   generateSuggestions(userMessage, response) {
     const baseSuggestions = [
       "Tell me more about this",
@@ -168,14 +197,11 @@ Please provide a helpful, personalized response as a nutrition coach. Use the us
     Include breakfast, lunch, dinner, and snacks. Focus on balanced nutrition, variety, and practical preparation.
     Format the response in a clear, organized way with ingredient lists.`;
 
-    try {
+    return this.makeApiRequestWithRetry(async () => {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       return response.text();
-    } catch (error) {
-      console.error('Meal plan generation error:', error);
-      return "I'd be happy to help create a meal plan for you! Please let me know your dietary preferences, any restrictions, and your goals, and I'll provide personalized suggestions.";
-    }
+    }, `meal plan with preferences: ${JSON.stringify(preferences)}`);
   }
 
   async analyzeNutrition(foodDescription) {
@@ -187,14 +213,11 @@ Please provide a helpful, personalized response as a nutrition coach. Use the us
     Provide estimated calories, macronutrients (protein, carbs, fats), and key vitamins/minerals.
     Also include health benefits and any considerations. Keep it practical and easy to understand.`;
 
-    try {
+    return this.makeApiRequestWithRetry(async () => {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       return response.text();
-    } catch (error) {
-      console.error('Nutrition analysis error:', error);
-      return "I'd be happy to analyze the nutritional content of your food! Please describe what you'd like me to analyze, and I'll provide detailed nutritional information.";
-    }
+    }, `nutrition analysis for: ${foodDescription}`);
   }
 }
 
