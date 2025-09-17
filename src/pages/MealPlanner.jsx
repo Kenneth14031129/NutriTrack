@@ -7,6 +7,7 @@ import {
   Trash2,
   Menu,
   Check,
+  Loader2,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import apiService from "../services/api";
@@ -15,7 +16,7 @@ const MealPlanner = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plannedMeals, setPlannedMeals] = useState({});
-  const [, setLoading] = useState(false);
+  const [isLoadingWeeklyMeals, setIsLoadingWeeklyMeals] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
   const [showDayModal, setShowDayModal] = useState(false);
   const [selectedDayForModal, setSelectedDayForModal] = useState(null);
@@ -27,6 +28,11 @@ const MealPlanner = () => {
     calories: "",
     protein: "",
   });
+
+  // Loading states for different operations
+  const [isCreatingMeal, setIsCreatingMeal] = useState(false);
+  const [isDeletingMeal, setIsDeletingMeal] = useState({});
+  const [isUpdatingMealStatus, setIsUpdatingMealStatus] = useState({});
 
   const mealTypes = [
     { id: "breakfast", label: "Breakfast", icon: "🌅", time: "8:00 AM" },
@@ -45,7 +51,7 @@ const MealPlanner = () => {
       return;
     }
 
-    setLoading(true);
+    setIsLoadingWeeklyMeals(true);
     try {
       const response = await apiService.getWeeklyMealPlan(startDate);
       setPlannedMeals(response.mealPlan || {});
@@ -72,7 +78,7 @@ const MealPlanner = () => {
       }
       setPlannedMeals({});
     } finally {
-      setLoading(false);
+      setIsLoadingWeeklyMeals(false);
     }
   };
 
@@ -126,6 +132,7 @@ const MealPlanner = () => {
   const handleCreateMeal = async () => {
     if (!mealForm.name.trim()) return;
 
+    setIsCreatingMeal(true);
     try {
       const mealData = {
         name: mealForm.name,
@@ -187,11 +194,14 @@ const MealPlanner = () => {
     } catch (error) {
       console.error("Error creating meal:", error);
       alert("Error creating meal: " + error.message);
+    } finally {
+      setIsCreatingMeal(false);
     }
   };
 
   // Delete meal
   const handleDeleteMeal = async (mealId, date, type) => {
+    setIsDeletingMeal(prev => ({ ...prev, [mealId]: true }));
     try {
       if (apiService.isAuthenticated()) {
         await apiService.deleteMeal(mealId);
@@ -214,11 +224,14 @@ const MealPlanner = () => {
       }
     } catch (error) {
       console.error("Error deleting meal:", error);
+    } finally {
+      setIsDeletingMeal(prev => ({ ...prev, [mealId]: false }));
     }
   };
 
   // Update meal status
   const handleUpdateMealStatus = async (mealId, status) => {
+    setIsUpdatingMealStatus(prev => ({ ...prev, [mealId]: true }));
     try {
       if (apiService.isAuthenticated()) {
         await apiService.updateMealStatus(mealId, status);
@@ -228,6 +241,8 @@ const MealPlanner = () => {
       }
     } catch (error) {
       console.error("Error updating meal status:", error);
+    } finally {
+      setIsUpdatingMealStatus(prev => ({ ...prev, [mealId]: false }));
     }
   };
 
@@ -265,9 +280,9 @@ const MealPlanner = () => {
       />
       <div className="flex flex-col flex-1 lg:ml-0">
         {/* Header */}
-        <div className="bg-gray-900 text-white border-b border-gray-800 px-6 py-4">
+        <div className="bg-gray-900 text-white border-b border-gray-800 px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-2 hover:bg-gray-800 rounded-lg transition-colors"
@@ -275,11 +290,12 @@ const MealPlanner = () => {
                 <Menu className="w-6 h-6 text-gray-300" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                  <ChefHat className="text-green-500" />
-                  Meal Planner
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
+                  <ChefHat className="text-green-500 w-6 h-6 sm:w-8 sm:h-8" />
+                  <span className="hidden sm:inline">Meal Planner</span>
+                  <span className="sm:hidden">Planner</span>
                 </h1>
-                <p className="text-gray-400 mt-1">
+                <p className="text-gray-400 mt-1 text-sm sm:text-base hidden sm:block">
                   Plan your weekly meals and stay on track
                 </p>
               </div>
@@ -287,9 +303,9 @@ const MealPlanner = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Week Navigation */}
-          <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 mb-6">
+          <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 mb-4 sm:mb-6">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => {
@@ -302,7 +318,7 @@ const MealPlanner = () => {
                 ←
               </button>
 
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">
                 {weekDays[0].toLocaleDateString("en-US", {
                   month: "long",
                   year: "numeric",
@@ -322,8 +338,18 @@ const MealPlanner = () => {
             </div>
           </div>
 
-          {/* Week View */}
-          <div className="grid grid-cols-7 gap-4 items-start">
+          {/* Loading State for Weekly Meals */}
+          {isLoadingWeeklyMeals ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 text-green-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-400">Loading your meal plan...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Week View */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-start">
             {weekDays.map((day, index) => {
               const meals = getMealsForDate(day);
               const totals = getDayTotals(day);
@@ -336,12 +362,12 @@ const MealPlanner = () => {
                     setSelectedDayForModal(day);
                     setShowDayModal(true);
                   }}
-                  className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 cursor-pointer hover:bg-gray-750 transition-colors ${
+                  className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-3 sm:p-4 cursor-pointer hover:bg-gray-750 transition-colors ${
                     isToday ? "ring-2 ring-green-500" : ""
                   }`}
                 >
-                  <div className="text-center mb-4">
-                    <div className="font-medium text-white">
+                  <div className="text-center mb-3 sm:mb-4">
+                    <div className="font-medium text-white text-sm sm:text-base">
                       {day.toLocaleDateString("en-US", { weekday: "short" })}
                     </div>
                     <div
@@ -351,9 +377,12 @@ const MealPlanner = () => {
                     >
                       {day.getDate()}
                     </div>
+                    <div className="text-xs text-gray-500 sm:hidden">
+                      {day.toLocaleDateString("en-US", { month: "short" })}
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {mealTypes.map((mealType) => (
                       <div
                         key={mealType.id}
@@ -361,8 +390,9 @@ const MealPlanner = () => {
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="text-xs font-medium text-gray-300 flex items-center gap-1">
-                            <span>{mealType.icon}</span>
-                            {mealType.label}
+                            <span className="text-xs sm:text-sm">{mealType.icon}</span>
+                            <span className="hidden sm:inline">{mealType.label}</span>
+                            <span className="sm:hidden">{mealType.label.slice(0, 3)}</span>
                           </div>
                           {day >= new Date(new Date().setHours(0, 0, 0, 0)) && (
                             <button
@@ -377,7 +407,7 @@ const MealPlanner = () => {
                               }}
                               className="text-green-400 hover:bg-green-500/20 p-1 rounded transition-colors"
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                             </button>
                           )}
                         </div>
@@ -386,7 +416,7 @@ const MealPlanner = () => {
                           {meals[mealType.id]?.map((meal) => (
                             <div
                               key={meal._id || meal.id}
-                              className={`text-xs rounded p-2 flex items-center justify-between transition-colors ${
+                              className={`text-xs rounded p-1.5 sm:p-2 flex items-center justify-between transition-colors ${
                                 meal.status === "consumed"
                                   ? "bg-green-500/20 border border-green-500/30"
                                   : meal.status === "prepared"
@@ -394,8 +424,8 @@ const MealPlanner = () => {
                                   : "bg-gray-700 border border-gray-600"
                               }`}
                             >
-                              <div className="flex-1">
-                                <div className="font-medium text-white">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-white truncate text-xs sm:text-sm">
                                   {meal.name}
                                 </div>
                               </div>
@@ -413,10 +443,15 @@ const MealPlanner = () => {
                                           "consumed"
                                         );
                                       }}
-                                      className="text-green-400 hover:bg-green-500/20 p-1 rounded transition-colors"
+                                      disabled={isUpdatingMealStatus[meal._id || meal.id]}
+                                      className="text-green-400 hover:bg-green-500/20 disabled:opacity-50 p-0.5 sm:p-1 rounded transition-colors"
                                       title="Mark as consumed"
                                     >
-                                      <Check className="w-3 h-3" />
+                                      {isUpdatingMealStatus[meal._id || meal.id] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Check className="w-3 h-3" />
+                                      )}
                                     </button>
                                   )}
                                 {day >=
@@ -430,9 +465,14 @@ const MealPlanner = () => {
                                         mealType.id
                                       );
                                     }}
-                                    className="text-red-400 hover:bg-red-500/20 p-1 rounded transition-colors"
+                                    disabled={isDeletingMeal[meal._id || meal.id]}
+                                    className="text-red-400 hover:bg-red-500/20 disabled:opacity-50 p-0.5 sm:p-1 rounded transition-colors"
                                   >
-                                    <Trash2 className="w-3 h-3" />
+                                    {isDeletingMeal[meal._id || meal.id] ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3 h-3" />
+                                    )}
                                   </button>
                                 )}
                               </div>
@@ -463,16 +503,18 @@ const MealPlanner = () => {
                 </div>
               );
             })}
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Add Meal Modal */}
         {showMealModal && (
-          <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
-              <div className="p-6 border-b border-gray-700">
+          <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-700">
+              <div className="p-4 sm:p-6 border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-white">
+                  <h3 className="text-lg sm:text-xl font-semibold text-white">
                     Create New Meal
                   </h3>
                   <button
@@ -484,9 +526,9 @@ const MealPlanner = () => {
                 </div>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
                 {/* Meal Form */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-1">
                       Meal Name *
@@ -560,7 +602,7 @@ const MealPlanner = () => {
                 </div>
 
                 {/* Nutrition Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-1">
                       Calories
@@ -620,19 +662,26 @@ const MealPlanner = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-700">
                   <button
                     onClick={() => setShowMealModal(false)}
-                    className="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors order-2 sm:order-1"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreateMeal}
-                    disabled={!mealForm.name.trim()}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!mealForm.name.trim() || isCreatingMeal}
+                    className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors order-1 sm:order-2 flex items-center justify-center gap-2"
                   >
-                    Create Meal
+                    {isCreatingMeal ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Meal"
+                    )}
                   </button>
                 </div>
               </div>
@@ -642,32 +691,34 @@ const MealPlanner = () => {
 
         {/* Day Detail Modal */}
         {showDayModal && selectedDayForModal && (
-          <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
-              <div className="p-6 border-b border-gray-700">
+          <div className="fixed inset-0 backdrop-blur bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-700">
+              <div className="p-4 sm:p-6 border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
-                    <ChefHat className="text-green-500" />
-                    {selectedDayForModal.toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
+                    <ChefHat className="text-green-500 w-5 h-5 sm:w-6 sm:h-6" />
+                    <span className="truncate">
+                      {selectedDayForModal.toLocaleDateString("en-US", {
+                        weekday: window.innerWidth < 640 ? "short" : "long",
+                        year: "numeric",
+                        month: window.innerWidth < 640 ? "short" : "long",
+                        day: "numeric",
+                      })}
+                    </span>
                   </h3>
                   <button
                     onClick={() => {
                       setShowDayModal(false);
                       setSelectedDayForModal(null);
                     }}
-                    className="text-gray-400 hover:text-gray-200 transition-colors text-2xl"
+                    className="text-gray-400 hover:text-gray-200 transition-colors text-xl sm:text-2xl ml-2"
                   >
                     ✕
                   </button>
                 </div>
               </div>
 
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {(() => {
                   const dayMeals = getMealsForDate(selectedDayForModal);
                   const dayTotals = getDayTotals(selectedDayForModal);
@@ -679,7 +730,7 @@ const MealPlanner = () => {
                         <h4 className="text-lg font-medium text-white mb-3">
                           Daily Summary
                         </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div className="text-center">
                             <div className="text-2xl font-bold text-green-400">
                               {dayTotals.calories}
@@ -833,10 +884,15 @@ const MealPlanner = () => {
                                                     "consumed"
                                                   )
                                                 }
-                                                className="text-green-400 hover:bg-green-500/20 p-2 rounded transition-colors"
+                                                disabled={isUpdatingMealStatus[meal._id || meal.id]}
+                                                className="text-green-400 hover:bg-green-500/20 disabled:opacity-50 p-2 rounded transition-colors"
                                                 title="Mark as consumed"
                                               >
-                                                <Check className="w-4 h-4" />
+                                                {isUpdatingMealStatus[meal._id || meal.id] ? (
+                                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                  <Check className="w-4 h-4" />
+                                                )}
                                               </button>
                                             )}
                                           {selectedDayForModal >=
@@ -851,9 +907,14 @@ const MealPlanner = () => {
                                                   mealType.id
                                                 )
                                               }
-                                              className="text-red-400 hover:bg-red-500/20 p-2 rounded transition-colors"
+                                              disabled={isDeletingMeal[meal._id || meal.id]}
+                                              className="text-red-400 hover:bg-red-500/20 disabled:opacity-50 p-2 rounded transition-colors"
                                             >
-                                              <Trash2 className="w-4 h-4" />
+                                              {isDeletingMeal[meal._id || meal.id] ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                              ) : (
+                                                <Trash2 className="w-4 h-4" />
+                                              )}
                                             </button>
                                           )}
                                         </div>

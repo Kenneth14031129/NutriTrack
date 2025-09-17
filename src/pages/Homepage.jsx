@@ -13,6 +13,7 @@ import {
   Dumbbell,
   RotateCcw,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import apiService from "../services/api";
@@ -39,11 +40,18 @@ const Homepage = () => {
   const [congratulatedGoal, setCongratulatedGoal] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
 
+  // Loading states
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSavingGoals, setIsSavingGoals] = useState(false);
+  const [isUpdatingProgress, setIsUpdatingProgress] = useState({});
+  const [isResetting, setIsResetting] = useState(false);
+
   // Check if goals are set on component mount and show goal setup each day
   useEffect(() => {
     const loadGoalsAndProgress = async () => {
       if (hasCheckedGoals) return; // Don't check again if already checked
 
+      setIsInitialLoading(true);
       try {
         const dateKey = new Date().toDateString();
         console.log("Starting goal check for date:", dateKey);
@@ -68,7 +76,7 @@ const Homepage = () => {
                   console.log("Loaded progress from database:", currentProgress);
                   setGoalProgress(currentProgress);
                 }
-              } catch (progressError) {
+              } catch {
                 console.log("No progress found in database");
               }
 
@@ -102,6 +110,8 @@ const Homepage = () => {
         // Show goal setup on error
         setShowGoalSetup(true);
         setHasCheckedGoals(true);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
 
@@ -198,6 +208,7 @@ const Homepage = () => {
         return;
       }
 
+      setIsSavingGoals(true);
       try {
         const goalsData = {
           targets: {
@@ -226,6 +237,8 @@ const Homepage = () => {
       } catch (error) {
         console.error("Error saving goals to database:", error);
         alert("Failed to save goals. Please check your connection and try again.");
+      } finally {
+        setIsSavingGoals(false);
       }
     }
   };
@@ -273,6 +286,7 @@ const Homepage = () => {
       return;
     }
 
+    setIsUpdatingProgress(prev => ({ ...prev, [goalType]: true }));
     try {
       const response = await apiService.updateProgress(goalType, value, "set");
       console.log("Progress update response:", response);
@@ -288,6 +302,8 @@ const Homepage = () => {
     } catch (error) {
       console.error("Error updating progress:", error);
       alert("Failed to update progress. Please check your connection and try again.");
+    } finally {
+      setIsUpdatingProgress(prev => ({ ...prev, [goalType]: false }));
     }
   };
 
@@ -302,6 +318,7 @@ const Homepage = () => {
       return;
     }
 
+    setIsResetting(true);
     try {
       // Delete goals and progress from database
       await Promise.all([
@@ -316,33 +333,34 @@ const Homepage = () => {
       ]);
 
       console.log("Successfully deleted goals and progress from database");
+
+      // Reset local state
+      setDailyGoals(null);
+      setGoalProgress({});
+      setHasCheckedGoals(false);
+      setGoalSetupData({
+        calorieGoal: "",
+        waterGoal: 8,
+        mealsGoal: 3,
+        exerciseGoal: 30,
+        sleepGoal: 8,
+        stepsGoal: 10000,
+        proteinGoal: "",
+        carbsGoal: "",
+        fiberGoal: "",
+        customGoals: [],
+      });
+      setCurrentStep(0);
+      setShowGoalSetup(true);
+      setShowResetModal(false);
     } catch (error) {
       console.error("Error deleting data from database:", error);
       alert("Failed to reset data in database. Please try again.");
       setShowResetModal(false);
-      return;
+    } finally {
+      setIsResetting(false);
     }
-
-    // Reset local state
-    setDailyGoals(null);
-    setGoalProgress({});
-    setHasCheckedGoals(false);
-    setGoalSetupData({
-      calorieGoal: "",
-      waterGoal: 8,
-      mealsGoal: 3,
-      exerciseGoal: 30,
-      sleepGoal: 8,
-      stepsGoal: 10000,
-      proteinGoal: "",
-      carbsGoal: "",
-      fiberGoal: "",
-      customGoals: [],
-    });
-    setCurrentStep(0);
-    setShowGoalSetup(true);
-    setShowResetModal(false);
-  };
+};
 
   const cancelReset = () => {
     setShowResetModal(false);
@@ -436,13 +454,43 @@ const Homepage = () => {
   const currentIcon = currentQuestion?.icon;
   const todayStats = getTodayStats();
 
+  // Show initial loading screen
+  if (isInitialLoading) {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-gray-900 to-gray-800">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          currentPage="homepage"
+        />
+
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+          <div className="text-center max-w-md">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                Loading NutriTrack
+              </h1>
+              <p className="text-gray-400">
+                Setting up your dashboard...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show welcome screen if no goals are set and setup is not shown
   if (!dailyGoals && !showGoalSetup && hasCheckedGoals) {
     return (
       <div className="flex h-screen bg-gradient-to-br from-gray-900 to-gray-800">
         <Sidebar
           isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          onClose={() => setSidebarOpen(false)}
+          currentPage="homepage"
         />
 
         <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
@@ -585,15 +633,25 @@ const Homepage = () => {
               <button
                 onClick={handleGoalSetupNext}
                 disabled={
-                  currentQuestion.type === "number" &&
-                  !goalSetupData[currentQuestion.field]
+                  isSavingGoals ||
+                  (currentQuestion.type === "number" &&
+                    !goalSetupData[currentQuestion.field])
                 }
                 className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
               >
-                {currentStep === goalSetupQuestions.length - 1
-                  ? "Complete Setup"
-                  : "Next"}
-                <ChevronRight className="w-4 h-4" />
+                {isSavingGoals ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    {currentStep === goalSetupQuestions.length - 1
+                      ? "Complete Setup"
+                      : "Next"}
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -642,11 +700,20 @@ const Homepage = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRestart}
-                className="flex items-center gap-2 bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base"
+                disabled={isResetting}
+                className="flex items-center gap-2 bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors text-sm sm:text-base"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span className="hidden sm:inline">Reset Day</span>
-                <span className="sm:hidden">Reset</span>
+                {isResetting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {isResetting ? "Resetting..." : "Reset Day"}
+                </span>
+                <span className="sm:hidden">
+                  {isResetting ? "..." : "Reset"}
+                </span>
               </button>
             </div>
           </div>
@@ -749,10 +816,15 @@ const Homepage = () => {
                       />
                       <button
                         onClick={() => updateGoalProgressFromInput("calories")}
-                        className="px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
+                        disabled={isUpdatingProgress.calories}
+                        className="px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded transition-colors flex items-center gap-1"
                         title="Set current calories"
                       >
-                        Set
+                        {isUpdatingProgress.calories ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Set"
+                        )}
                       </button>
                     </>
                   )}
@@ -846,10 +918,15 @@ const Homepage = () => {
                       />
                       <button
                         onClick={() => updateGoalProgressFromInput("water")}
-                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                        disabled={isUpdatingProgress.water}
+                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded transition-colors flex items-center gap-1"
                         title="Set current glasses"
                       >
-                        Set
+                        {isUpdatingProgress.water ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Set"
+                        )}
                       </button>
                     </>
                   )}
@@ -940,10 +1017,15 @@ const Homepage = () => {
                       />
                       <button
                         onClick={() => updateGoalProgressFromInput("meals")}
-                        className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                        disabled={isUpdatingProgress.meals}
+                        className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded transition-colors flex items-center gap-1"
                         title="Set current meals"
                       >
-                        Set
+                        {isUpdatingProgress.meals ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Set"
+                        )}
                       </button>
                     </>
                   )}
@@ -1032,10 +1114,15 @@ const Homepage = () => {
                       />
                       <button
                         onClick={() => updateGoalProgressFromInput("exercise")}
-                        className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors"
+                        disabled={isUpdatingProgress.exercise}
+                        className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded transition-colors flex items-center gap-1"
                         title="Set current minutes"
                       >
-                        Set
+                        {isUpdatingProgress.exercise ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Set"
+                        )}
                       </button>
                     </>
                   )}
@@ -1126,10 +1213,15 @@ const Homepage = () => {
                       />
                       <button
                         onClick={() => updateGoalProgressFromInput("sleep")}
-                        className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
+                        disabled={isUpdatingProgress.sleep}
+                        className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded transition-colors flex items-center gap-1"
                         title="Set current hours"
                       >
-                        Set
+                        {isUpdatingProgress.sleep ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Set"
+                        )}
                       </button>
                     </>
                   )}
@@ -1218,10 +1310,15 @@ const Homepage = () => {
                       />
                       <button
                         onClick={() => updateGoalProgressFromInput("steps")}
-                        className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                        disabled={isUpdatingProgress.steps}
+                        className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded transition-colors flex items-center gap-1"
                         title="Set current steps"
                       >
-                        Set
+                        {isUpdatingProgress.steps ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Set"
+                        )}
                       </button>
                     </>
                   )}
@@ -1370,9 +1467,17 @@ const Homepage = () => {
                 </button>
                 <button
                   onClick={confirmReset}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  disabled={isResetting}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2"
                 >
-                  Yes, Reset Day
+                  {isResetting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    "Yes, Reset Day"
+                  )}
                 </button>
               </div>
             </div>

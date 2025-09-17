@@ -150,7 +150,8 @@ const Coach = () => {
 
     // Reset textarea height
     if (inputRef.current) {
-      inputRef.current.style.height = "52px";
+      const minHeight = window.innerWidth < 640 ? "44px" : "52px";
+      inputRef.current.style.height = minHeight;
     }
 
     try {
@@ -216,7 +217,8 @@ const Coach = () => {
 
   const adjustTextareaHeight = () => {
     if (inputRef.current) {
-      inputRef.current.style.height = "52px";
+      const minHeight = window.innerWidth < 640 ? "44px" : "52px";
+      inputRef.current.style.height = minHeight;
       inputRef.current.style.height =
         Math.min(inputRef.current.scrollHeight, 120) + "px";
     }
@@ -286,7 +288,7 @@ const Coach = () => {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-6">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -295,23 +297,23 @@ const Coach = () => {
               }`}
             >
               <div
-                className={`flex max-w-3xl ${
+                className={`flex w-full max-w-3xl ${
                   message.type === "user" ? "flex-row-reverse" : "flex-row"
                 }`}
               >
                 {/* Avatar */}
                 <div
                   className={`flex-shrink-0 ${
-                    message.type === "user" ? "ml-3" : "mr-3"
+                    message.type === "user" ? "ml-2 sm:ml-3" : "mr-2 sm:mr-3"
                   }`}
                 >
                   {message.type === "user" ? (
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                     </div>
                   ) : (
-                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-white" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                      <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                     </div>
                   )}
                 </div>
@@ -323,13 +325,13 @@ const Coach = () => {
                   }`}
                 >
                   <div
-                    className={`px-4 py-3 rounded-2xl max-w-2xl ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-2xl max-w-full sm:max-w-2xl ${
                       message.type === "user"
                         ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
                         : "bg-gray-800/90 backdrop-blur-sm text-white shadow-sm border border-gray-700"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    <p className="text-sm leading-relaxed break-words">{message.content}</p>
                   </div>
 
                   <div className="flex items-center mt-1 space-x-2">
@@ -350,12 +352,12 @@ const Coach = () => {
           {/* Loading indicator */}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="flex mr-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
+              <div className="flex mr-2 sm:mr-3">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                  <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
               </div>
-              <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-2xl px-4 py-3">
+              <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-2xl px-3 sm:px-4 py-2 sm:py-3">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div
@@ -375,18 +377,18 @@ const Coach = () => {
 
         {/* Quick Prompts */}
         {messages.length === 1 && (
-          <div className="px-6 py-4 border-t border-gray-700 bg-gray-800/40 backdrop-blur-sm">
-            <p className="text-sm font-medium text-gray-300 mb-3">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-700 bg-gray-800/40 backdrop-blur-sm">
+            <p className="text-sm font-medium text-gray-300 mb-2 sm:mb-3">
               Quick prompts to get started:
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleQuickPrompt(prompt)}
-                  className="p-3 bg-gray-700/80 backdrop-blur-sm border border-gray-600 rounded-lg text-sm text-gray-300 hover:bg-gray-600 hover:shadow-md transition-all duration-200 text-left"
+                  className="p-2 sm:p-3 bg-gray-700/80 backdrop-blur-sm border border-gray-600 rounded-lg text-xs sm:text-sm text-gray-300 hover:bg-gray-600 hover:shadow-md transition-all duration-200 text-left"
                 >
-                  <Sparkles className="w-4 h-4 text-yellow-500 mb-1" />
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 mb-1" />
                   {prompt}
                 </button>
               ))}
@@ -395,8 +397,8 @@ const Coach = () => {
         )}
 
         {/* Input Area */}
-        <div className="bg-gray-800/90 backdrop-blur-sm border-t border-gray-700 px-6 py-4">
-          <div className="flex items-start space-x-3">
+        <div className="bg-gray-800/90 backdrop-blur-sm border-t border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-start space-x-2 sm:space-x-3">
             <div className="flex-1">
               <div className="relative">
                 <textarea
@@ -411,25 +413,25 @@ const Coach = () => {
                   }}
                   placeholder="Ask me anything about nutrition, workouts, or wellness..."
                   rows={1}
-                  className="w-full px-4 py-3 pr-12 bg-gray-700/90 backdrop-blur-sm border border-gray-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-white placeholder-gray-400 overflow-hidden"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 bg-gray-700/90 backdrop-blur-sm border border-gray-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-white placeholder-gray-400 overflow-hidden text-sm sm:text-base"
                   style={{
-                    minHeight: "52px",
+                    minHeight: "44px",
                     maxHeight: "120px",
-                    height: "52px",
+                    height: "44px",
                   }}
                 />
                 <button
                   onClick={toggleVoiceRecording}
-                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors ${
+                  className={`absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-2 rounded-full transition-colors ${
                     isListening
                       ? "bg-red-500 text-white"
                       : "text-gray-400 hover:text-gray-300 hover:bg-gray-600"
                   }`}
                 >
                   {isListening ? (
-                    <MicOff className="w-4 h-4" />
+                    <MicOff className="w-3 h-3 sm:w-4 sm:h-4" />
                   ) : (
-                    <Mic className="w-4 h-4" />
+                    <Mic className="w-3 h-3 sm:w-4 sm:h-4" />
                   )}
                 </button>
               </div>
@@ -437,9 +439,9 @@ const Coach = () => {
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isLoading}
-              className="w-[52px] h-[52px] bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-2xl hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center flex-shrink-0"
+              className="w-[44px] h-[44px] sm:w-[52px] sm:h-[52px] bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-2xl hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center flex-shrink-0"
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
