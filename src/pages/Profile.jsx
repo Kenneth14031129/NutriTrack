@@ -12,6 +12,7 @@ import {
   Shield,
   Edit3,
   X,
+  Loader2,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import apiService from "../services/api";
@@ -97,6 +98,7 @@ const Profile = () => {
   }, [formData.age, formData.gender, formData.height, formData.weight, formData.activityLevel]);
 
   const loadProfile = async () => {
+    setLoading(true);
     try {
       const response = await apiService.getProfile();
 
@@ -299,7 +301,17 @@ const Profile = () => {
           currentPage="profile"
         />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-white">Loading profile...</div>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+            </div>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              Loading Profile
+            </h2>
+            <p className="text-gray-400">
+              Setting up your personal information...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -366,7 +378,11 @@ const Profile = () => {
                     disabled={saving}
                     className="flex items-center gap-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
                   >
-                    <Save className="w-4 h-4" />
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
                     <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
                     <span className="sm:hidden">{saving ? '...' : 'Save'}</span>
                   </button>

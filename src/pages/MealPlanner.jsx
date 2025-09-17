@@ -271,6 +271,34 @@ const MealPlanner = () => {
 
   const weekDays = getWeekDays(selectedDate);
 
+  // Show initial loading screen
+  if (isLoadingWeeklyMeals && Object.keys(plannedMeals).length === 0) {
+    return (
+      <div className="flex h-screen bg-gray-900">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          currentPage="meal-planner"
+        />
+        <div className="flex flex-col flex-1 lg:ml-0">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                Loading Meal Planner
+              </h2>
+              <p className="text-gray-400">
+                Setting up your weekly meal plan...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-900">
       <Sidebar
@@ -338,18 +366,8 @@ const MealPlanner = () => {
             </div>
           </div>
 
-          {/* Loading State for Weekly Meals */}
-          {isLoadingWeeklyMeals ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 text-green-500 animate-spin mx-auto mb-4" />
-                <p className="text-gray-400">Loading your meal plan...</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Week View */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-start">
+          {/* Week View */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-start">
             {weekDays.map((day, index) => {
               const meals = getMealsForDate(day);
               const totals = getDayTotals(day);
@@ -503,9 +521,7 @@ const MealPlanner = () => {
                 </div>
               );
             })}
-              </div>
-            </>
-          )}
+          </div>
         </div>
 
         {/* Add Meal Modal */}

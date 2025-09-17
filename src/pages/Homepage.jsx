@@ -53,18 +53,12 @@ const Homepage = () => {
 
       setIsInitialLoading(true);
       try {
-        const dateKey = new Date().toDateString();
-        console.log("Starting goal check for date:", dateKey);
-
         // Check database for today's goals (if authenticated)
         if (apiService.isAuthenticated()) {
           try {
-            console.log(`Checking database for goals on ${dateKey}...`);
             const response = await apiService.getCurrentGoals();
-            console.log("Database response:", response);
 
             if (response && response.goals) {
-              console.log("Found goals in database:", response.goals);
               setDailyGoals(response.goals);
 
               // Try to load progress from database if available
@@ -72,8 +66,9 @@ const Homepage = () => {
                 const progressResponse = await apiService.getTodayProgress();
                 if (progressResponse && progressResponse.progress) {
                   // Extract the actual progress data from the response
-                  const currentProgress = progressResponse.progress.current || {};
-                  console.log("Loaded progress from database:", currentProgress);
+                  const currentProgress =
+                    progressResponse.progress.current || {};
+
                   setGoalProgress(currentProgress);
                 }
               } catch {
@@ -88,7 +83,10 @@ const Homepage = () => {
           } catch (error) {
             console.log("Database goals error:", error.message, error);
             // Check if it's a 404 (no goals) vs other errors
-            if (error.message.includes('No goals found') || error.message.includes('404')) {
+            if (
+              error.message.includes("No goals found") ||
+              error.message.includes("404")
+            ) {
               console.log("Confirmed: No goals exist in database for today");
             } else {
               console.error("Unexpected database error:", error);
@@ -236,7 +234,9 @@ const Homepage = () => {
         setCurrentStep(0);
       } catch (error) {
         console.error("Error saving goals to database:", error);
-        alert("Failed to save goals. Please check your connection and try again.");
+        alert(
+          "Failed to save goals. Please check your connection and try again."
+        );
       } finally {
         setIsSavingGoals(false);
       }
@@ -286,7 +286,7 @@ const Homepage = () => {
       return;
     }
 
-    setIsUpdatingProgress(prev => ({ ...prev, [goalType]: true }));
+    setIsUpdatingProgress((prev) => ({ ...prev, [goalType]: true }));
     try {
       const response = await apiService.updateProgress(goalType, value, "set");
       console.log("Progress update response:", response);
@@ -301,9 +301,11 @@ const Homepage = () => {
       }
     } catch (error) {
       console.error("Error updating progress:", error);
-      alert("Failed to update progress. Please check your connection and try again.");
+      alert(
+        "Failed to update progress. Please check your connection and try again."
+      );
     } finally {
-      setIsUpdatingProgress(prev => ({ ...prev, [goalType]: false }));
+      setIsUpdatingProgress((prev) => ({ ...prev, [goalType]: false }));
     }
   };
 
@@ -329,7 +331,7 @@ const Homepage = () => {
         apiService.deleteTodayProgress().catch(() => {
           // Progress might not exist, that's okay
           console.log("No progress to delete or already deleted");
-        })
+        }),
       ]);
 
       console.log("Successfully deleted goals and progress from database");
@@ -360,7 +362,7 @@ const Homepage = () => {
     } finally {
       setIsResetting(false);
     }
-};
+  };
 
   const cancelReset = () => {
     setShowResetModal(false);
@@ -473,9 +475,7 @@ const Homepage = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                 Loading NutriTrack
               </h1>
-              <p className="text-gray-400">
-                Setting up your dashboard...
-              </p>
+              <p className="text-gray-400">Setting up your dashboard...</p>
             </div>
           </div>
         </div>

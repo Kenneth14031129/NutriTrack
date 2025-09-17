@@ -9,6 +9,7 @@ import {
   User,
   Menu,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import geminiService from "../services/geminiService";
@@ -26,6 +27,10 @@ const Coach = () => {
   const [userContext, setUserContext] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Additional loading states
+  const [isLoadingChat, setIsLoadingChat] = useState(true);
+  const [isClearingChat, setIsClearingChat] = useState(false);
 
   const quickPrompts = [
     "Create a meal plan for weight loss",
@@ -47,6 +52,7 @@ const Coach = () => {
   }, [messages]);
 
   const loadActiveChat = async () => {
+    setIsLoadingChat(true);
     try {
       const token = sessionStorage.getItem("authToken");
 
@@ -73,6 +79,8 @@ const Coach = () => {
       console.error("Failed to load chat:", error);
       // Fallback to localStorage
       setMessages(chatService.getFallbackMessages());
+    } finally {
+      setIsLoadingChat(false);
     }
   };
 
@@ -94,6 +102,7 @@ const Coach = () => {
   };
 
   const clearChat = async () => {
+    setIsClearingChat(true);
     try {
       if (apiService.isAuthenticated() && currentSessionId) {
         const response = await chatService.clearChat(currentSessionId);
@@ -129,6 +138,8 @@ const Coach = () => {
       }
     } catch (error) {
       console.error("Failed to clear chat:", error);
+    } finally {
+      setIsClearingChat(false);
     }
   };
 
@@ -243,6 +254,34 @@ const Coach = () => {
     });
   };
 
+  // Show initial loading screen
+  if (isLoadingChat) {
+    return (
+      <div className="flex h-screen bg-gray-900">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          currentPage="ai-coach"
+        />
+        <div className="flex flex-col flex-1 lg:ml-0">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                Loading AI Coach
+              </h2>
+              <p className="text-gray-400">
+                Setting up your conversation...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-900">
       <Sidebar
@@ -278,10 +317,15 @@ const Coach = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={clearChat}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                disabled={isClearingChat}
+                className="p-2 hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors"
                 title="Clear chat history"
               >
-                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 hover:text-white" />
+                {isClearingChat ? (
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 hover:text-white" />
+                )}
               </button>
             </div>
           </div>
@@ -441,7 +485,11 @@ const Coach = () => {
               disabled={!inputMessage.trim() || isLoading}
               className="w-[44px] h-[44px] sm:w-[52px] sm:h-[52px] bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-2xl hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center flex-shrink-0"
             >
-              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
           </div>
         </div>

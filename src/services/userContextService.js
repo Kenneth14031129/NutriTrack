@@ -22,13 +22,13 @@ class UserContextService {
       // Get goals from database first (same as Homepage)
       let goalsData = null;
       try {
-        console.log('Checking database for current goals...');
+       
         // Try database first if authenticated
         try {
           const apiGoalsResponse = await apiService.getCurrentGoals();
           if (apiGoalsResponse && apiGoalsResponse.goals) {
             goalsData = apiGoalsResponse.goals;
-            console.log('Goals loaded from database:', goalsData);
+          
           }
         } catch (error) {
           console.log('Database goals failed, trying localStorage...', error.message);
@@ -39,22 +39,17 @@ class UserContextService {
 
           if (localGoalsData[dateKey]) {
             goalsData = localGoalsData[dateKey].goals;
-            console.log('Goals loaded from localStorage fallback:', goalsData);
+          
           }
         }
       } catch (error) {
         console.error('Error loading goals:', error);
       }
 
-      // Debug logging
-      console.log('Final Goals Data:', goalsData);
-
+     
       const context = this.buildUserContext(profileData, goalsData);
 
-      // Debug the final context
-      console.log('Final User Context:', context);
-      console.log('Context Summary:', this.getContextSummary(context));
-
+     
       // Cache the context
       this.cachedContext = context;
       this.lastFetch = Date.now();
