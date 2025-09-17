@@ -203,14 +203,28 @@ const Coach = () => {
     } catch (error) {
       console.error("Error in message handling:", error);
 
-      // Fallback response if anything fails
+      // Check if it's a rate limiting or quota error
+      let fallbackContent = "I apologize, but I'm experiencing some technical difficulties right now. Please try again in a moment, or feel free to ask your question in a different way.";
+      let suggestions = ["Try again", "Ask differently", "Contact support"];
+
+      if (error.message && (
+        error.message.includes("quota") ||
+        error.message.includes("rate limit") ||
+        error.message.includes("429") ||
+        error.message.includes("Resource exhausted") ||
+        error.message.includes("Rate limit exceeded")
+      )) {
+        fallbackContent = "I've reached my daily conversation limit with the AI service. Don't worry - I can still help! You can try asking again in a few minutes, or I'll be fully available again tomorrow. Thank you for understanding! 🤗";
+        suggestions = ["Try again later", "Ask simple questions", "Check back tomorrow"];
+      }
+
+      // Fallback response based on error type
       const fallbackResponse = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content:
-          "I apologize, but I'm experiencing some technical difficulties right now. Please try again in a moment, or feel free to ask your question in a different way.",
+        content: fallbackContent,
         timestamp: new Date(),
-        suggestions: ["Try again", "Ask differently", "Contact support"],
+        suggestions: suggestions,
       };
 
       setMessages((prev) => [...prev, fallbackResponse]);

@@ -65,6 +65,17 @@ Please provide a helpful, personalized response as a nutrition coach. Use the us
       };
     } catch (error) {
       console.error('Gemini API error:', error);
+
+      // Re-throw rate limiting errors with more specific information
+      if (error.message && (
+        error.message.includes('quota') ||
+        error.message.includes('rate limit') ||
+        error.message.includes('429') ||
+        error.message.includes('Resource exhausted')
+      )) {
+        throw new Error(`Rate limit exceeded: ${error.message}`);
+      }
+
       return this.getFallbackResponse(userMessage);
     }
   }
