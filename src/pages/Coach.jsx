@@ -41,6 +41,25 @@ const Coach = () => {
     "How can I improve my metabolism?",
   ];
 
+  // Format message content to handle markdown-like formatting
+  const formatMessageContent = (content) => {
+    if (!content) return content;
+
+    // Split by lines and process each line
+    const lines = content.split('\n');
+    const formattedLines = lines.map(line => {
+      // Handle bullet points (lines starting with * or -)
+      if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+        return line.replace(/^\s*[*-]\s/, '• ');
+      }
+      // Handle bold text (**text**)
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      return line;
+    });
+
+    return formattedLines.join('\n');
+  };
+
   // Load chat and user context on component mount
   useEffect(() => {
     loadActiveChat();
@@ -389,7 +408,16 @@ const Coach = () => {
                         : "bg-gray-800/90 backdrop-blur-sm text-white shadow-sm border border-gray-700"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                    {message.type === "bot" ? (
+                      <div
+                        className="text-sm leading-relaxed break-words whitespace-pre-line"
+                        dangerouslySetInnerHTML={{
+                          __html: formatMessageContent(message.content)
+                        }}
+                      />
+                    ) : (
+                      <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                    )}
                   </div>
 
                   <div className="flex items-center mt-1 space-x-2">
