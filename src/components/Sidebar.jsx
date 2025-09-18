@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import apiService from "../services/api";
 import {
-  Settings,
   ChevronRight,
   Bot,
-  Shield,
   ChefHat,
   Home,
   LogOut,

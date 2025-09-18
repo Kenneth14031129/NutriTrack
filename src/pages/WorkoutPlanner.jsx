@@ -3,12 +3,10 @@ import {
   Plus,
   Clock,
   Dumbbell,
-  Search,
   Trash2,
   Menu,
   Check,
   Loader2,
-  Timer,
   Target,
   X,
 } from "lucide-react";
@@ -42,10 +40,10 @@ const WorkoutPlanner = () => {
 
   // Helper function to convert 24-hour time to 12-hour format
   const formatTime12Hour = (time24) => {
-    if (!time24) return '';
-    const [hours, minutes] = time24.split(':');
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":");
     const hour12 = parseInt(hours, 10);
-    const ampm = hour12 >= 12 ? 'PM' : 'AM';
+    const ampm = hour12 >= 12 ? "PM" : "AM";
     const displayHour = hour12 === 0 ? 12 : hour12 > 12 ? hour12 - 12 : hour12;
     return `${displayHour}:${minutes} ${ampm}`;
   };
@@ -255,7 +253,8 @@ const WorkoutPlanner = () => {
         (workout) => (workout._id || workout.id) === workoutId
       );
 
-      const newStatus = currentWorkout?.status === "completed" ? "planned" : "completed";
+      const newStatus =
+        currentWorkout?.status === "completed" ? "planned" : "completed";
 
       await apiService.updateWorkoutStatus(workoutId, newStatus);
 
@@ -464,10 +463,11 @@ const WorkoutPlanner = () => {
                   onClick={() => {
                     setShowWorkoutModal(true);
                   }}
-                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all flex items-center gap-2"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all flex items-center gap-1 sm:gap-2"
                 >
-                  <Plus className="w-4 h-4" />
-                  Quick Add
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Quick Add</span>
+                  <span className="sm:hidden">Add</span>
                 </button>
               )}
             </div>
@@ -523,14 +523,16 @@ const WorkoutPlanner = () => {
                           : "bg-blue-600/20 border-blue-600"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="text-2xl">{workoutType?.icon}</div>
-                          <div>
-                            <h4 className="font-semibold text-white">
+                      <div className="flex items-start justify-between mb-2 sm:mb-3">
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                          <div className="text-lg sm:text-2xl flex-shrink-0">
+                            {workoutType?.icon}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium sm:font-semibold text-sm sm:text-base text-white truncate">
                               {workout.name}
                             </h4>
-                            <p className="text-sm text-gray-400">
+                            <p className="text-xs sm:text-sm text-gray-400 truncate">
                               {workoutType?.label}
                             </p>
                           </div>
@@ -545,64 +547,73 @@ const WorkoutPlanner = () => {
                                 workout.type
                               )
                             }
-                            disabled={isUpdatingWorkoutStatus[workout._id || workout.id]}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                            disabled={
+                              isUpdatingWorkoutStatus[workout._id || workout.id]
+                            }
+                            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
                               workout.status === "completed"
                                 ? "bg-green-500 text-white hover:bg-green-600"
                                 : "bg-blue-500 text-white hover:bg-blue-600"
                             }`}
                           >
-                            {isUpdatingWorkoutStatus[workout._id || workout.id] ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                            {isUpdatingWorkoutStatus[
+                              workout._id || workout.id
+                            ] ? (
+                              <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                             ) : workout.status === "completed" ? (
-                              <Check className="w-4 h-4" />
+                              <Check className="w-3 h-3 sm:w-4 sm:h-4" />
                             ) : (
-                              <Clock className="w-4 h-4" />
+                              <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                             )}
                           </button>
                         ) : (
                           <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                               workout.status === "completed"
                                 ? "bg-green-500 text-white"
                                 : "bg-red-500 text-white"
                             }`}
                           >
                             {workout.status === "completed" ? (
-                              <Check className="w-4 h-4" />
+                              <Check className="w-3 h-3 sm:w-4 sm:h-4" />
                             ) : (
-                              <X className="w-4 h-4" />
+                              <X className="w-3 h-3 sm:w-4 sm:h-4" />
                             )}
                           </div>
                         )}
                       </div>
 
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                         <div className="flex items-center text-gray-300">
-                          <Clock className="w-4 h-4 mr-2" />
-                          {formatTime12Hour(workout.plannedTime)} ({workout.duration} min)
+                          <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                          <span className="truncate">
+                            {formatTime12Hour(workout.plannedTime)} (
+                            {workout.duration} min)
+                          </span>
                         </div>
                         {workout.exercises && (
                           <div className="flex items-center text-gray-300">
-                            <Target className="w-4 h-4 mr-2" />
-                            {workout.exercises}
+                            <Target className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                            <span className="truncate">
+                              {workout.exercises}
+                            </span>
                           </div>
                         )}
                         {workout.targetMuscles && (
-                          <div className="text-gray-400">
+                          <div className="text-gray-400 truncate">
                             Target: {workout.targetMuscles}
                           </div>
                         )}
                         {workout.notes && (
-                          <div className="text-gray-400 italic">
+                          <div className="text-gray-400 italic text-xs line-clamp-2">
                             "{workout.notes}"
                           </div>
                         )}
                       </div>
 
-                      <div className="mt-3 pt-3 border-t border-gray-600 flex items-center justify-between">
+                      <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-600 flex items-center justify-between">
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
                             workout.status === "completed"
                               ? "bg-green-600 text-white"
                               : isMissed
@@ -628,13 +639,15 @@ const WorkoutPlanner = () => {
                               });
                               setShowDeleteModal(true);
                             }}
-                            disabled={isDeletingWorkout[workout._id || workout.id]}
-                            className="p-1 text-red-400 hover:bg-red-900/30 rounded transition-colors"
+                            disabled={
+                              isDeletingWorkout[workout._id || workout.id]
+                            }
+                            className="p-1 sm:p-1.5 text-red-400 hover:bg-red-900/30 rounded transition-colors flex-shrink-0"
                           >
                             {isDeletingWorkout[workout._id || workout.id] ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                             ) : (
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                             )}
                           </button>
                         )}
@@ -650,16 +663,20 @@ const WorkoutPlanner = () => {
 
       {/* Workout Creation Modal */}
       {showWorkoutModal && (
-        <div className="fixed inset-0 backdrop-blur bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl shadow-xl max-w-lg w-full border border-gray-700">
-            <div className="border-b border-gray-700 px-6 py-4">
-              <h2 className="text-xl font-bold text-white">Add New Workout</h2>
-              <p className="text-sm text-gray-400">Plan your workout session</p>
+        <div className="fixed inset-0 backdrop-blur bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-gray-800 rounded-xl shadow-xl max-w-xs sm:max-w-md lg:max-w-lg w-full border border-gray-700">
+            <div className="border-b border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
+              <h2 className="text-lg sm:text-xl font-bold text-white">
+                Add New Workout
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-400">
+                Plan your workout session
+              </p>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                   Workout Name
                 </label>
                 <input
@@ -669,12 +686,12 @@ const WorkoutPlanner = () => {
                     setWorkoutForm({ ...workoutForm, name: e.target.value })
                   }
                   placeholder="e.g., Upper Body Strength"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
+                  className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                   Workout Type
                 </label>
                 <select
@@ -682,7 +699,7 @@ const WorkoutPlanner = () => {
                   onChange={(e) =>
                     setWorkoutForm({ ...workoutForm, type: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   {workoutTypes.map((type) => (
                     <option key={type.id} value={type.id}>
@@ -692,9 +709,9 @@ const WorkoutPlanner = () => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                     Planned Time
                   </label>
                   <input
@@ -706,11 +723,11 @@ const WorkoutPlanner = () => {
                         plannedTime: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                     Duration (minutes)
                   </label>
                   <input
@@ -723,14 +740,14 @@ const WorkoutPlanner = () => {
                       })
                     }
                     placeholder="60"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
+                    className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                     Exercises/Focus
                   </label>
                   <input
@@ -742,12 +759,12 @@ const WorkoutPlanner = () => {
                         exercises: e.target.value,
                       })
                     }
-                    placeholder="e.g., Push-ups, Pull-ups, Squats"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
+                    placeholder="Push-ups, Pull-ups"
+                    className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                     Target Muscles
                   </label>
                   <input
@@ -759,24 +776,24 @@ const WorkoutPlanner = () => {
                         targetMuscles: e.target.value,
                       })
                     }
-                    placeholder="e.g., Chest, Back, Shoulders"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
+                    placeholder="Chest, Back"
+                    className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-gray-700 px-6 py-4 flex justify-end space-x-3">
+            <div className="border-t border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => setShowWorkoutModal(false)}
-                className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateWorkout}
                 disabled={isCreatingWorkout || !workoutForm.name.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isCreatingWorkout ? (
                   <>
@@ -794,31 +811,33 @@ const WorkoutPlanner = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && workoutToDelete && (
-        <div className="fixed inset-0 backdrop-blur bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl shadow-xl max-w-md w-full border border-gray-700">
-            <div className="border-b border-gray-700 px-6 py-4">
-              <h2 className="text-xl font-bold text-white">Delete Workout</h2>
-              <p className="text-sm text-gray-400">
+        <div className="fixed inset-0 backdrop-blur bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-gray-800 rounded-xl shadow-xl max-w-xs sm:max-w-md w-full border border-gray-700">
+            <div className="border-b border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
+              <h2 className="text-lg sm:text-xl font-bold text-white">
+                Delete Workout
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-400">
                 This action cannot be undone
               </p>
             </div>
 
-            <div className="p-6">
-              <p className="text-gray-300 mb-4">
+            <div className="p-4 sm:p-6">
+              <p className="text-sm sm:text-base text-gray-300 mb-3 sm:mb-4">
                 Are you sure you want to delete "{workoutToDelete.name}"?
               </p>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 This workout will be permanently removed from your schedule.
               </p>
             </div>
 
-            <div className="border-t border-gray-700 px-6 py-4 flex justify-end space-x-3">
+            <div className="border-t border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setWorkoutToDelete(null);
                 }}
-                className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors"
               >
                 Cancel
               </button>
@@ -827,7 +846,7 @@ const WorkoutPlanner = () => {
                 disabled={
                   workoutToDelete && isDeletingWorkout[workoutToDelete.id]
                 }
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {workoutToDelete && isDeletingWorkout[workoutToDelete.id] ? (
                   <>
