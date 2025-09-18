@@ -330,8 +330,8 @@ router.put('/change-password', auth, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ 
-        message: 'Please provide current password and new password' 
+      return res.status(400).json({
+        message: 'Please provide current password and new password'
       });
     }
 
@@ -354,15 +354,133 @@ router.put('/change-password', auth, async (req, res) => {
 
   } catch (error) {
     console.error('Password change error:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         message: 'Validation error',
         errors: Object.values(error.errors).map(err => err.message)
       });
     }
-    
+
     res.status(500).json({ message: 'Server error changing password' });
+  }
+});
+
+// @route   POST /api/auth/forgot-password
+// @desc    Send password reset email
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Please provide your email address'
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return res.json({
+        message: 'If an account with that email exists, we have sent a password reset link to it.'
+      });
+    }
+
+    // Check if user is active and verified
+    if (!user.isActive) {
+      return res.status(400).json({ message: 'Account is deactivated' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(400).json({
+        message: 'Please verify your email address first before resetting password'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = user.generatePasswordResetToken();
+    await user.save();
+
+    // Send reset email
+    const emailResult = await emailService.sendPasswordResetEmail(user.email, resetToken, user.name);
+
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      return res.status(500).json({
+        message: 'Failed to send password reset email. Please try again.'
+      });
+    }
+
+    res.json({
+      message: 'If an account with that email exists, we have sent a password reset link to it.'
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error during password reset request' });
+  }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset password using token
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        message: 'Please provide reset token and new password'
+      });
+    }
+
+    // Find user with reset token
+    const user = await User.findOne({
+      'passwordReset.token': token,
+      'passwordReset.expiresAt': { $gt: new Date() },
+      'passwordReset.isUsed': false
+    }).select('+passwordReset.token +passwordReset.expiresAt +passwordReset.isUsed');
+
+    if (!user) {
+      return res.status(400).json({
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Verify token
+    const verificationResult = user.verifyPasswordResetToken(token);
+    if (!verificationResult.success) {
+      return res.status(400).json({
+        message: verificationResult.message
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.passwordReset.isUsed = true;
+    await user.save();
+
+    // Clear reset token
+    user.clearPasswordReset();
+    await user.save();
+
+    res.json({
+      message: 'Password reset successfully. You can now log in with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => err.message)
+      });
+    }
+
+    res.status(500).json({ message: 'Server error during password reset' });
   }
 });
 

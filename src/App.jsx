@@ -5,6 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import Coach from "./pages/Coach";
 import MealPlanner from "./pages/MealPlanner";
 import WorkoutPlanner from "./pages/WorkoutPlanner";
@@ -21,8 +22,9 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          {/* Main Login Route */}
+          {/* Authentication Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected Routes */}
           <Route

@@ -153,6 +153,23 @@ const userSchema = new mongoose.Schema({
       select: false
     }
   },
+
+  // Password Reset
+  passwordReset: {
+    token: {
+      type: String,
+      select: false
+    },
+    expiresAt: {
+      type: Date,
+      select: false
+    },
+    isUsed: {
+      type: Boolean,
+      default: false,
+      select: false
+    }
+  },
   
   // Tracking
   createdAt: {
@@ -306,6 +323,48 @@ userSchema.methods.clearOTP = function() {
     code: null,
     expiresAt: null,
     attempts: 0,
+    isUsed: false
+  };
+};
+
+// Generate Password Reset Token
+userSchema.methods.generatePasswordResetToken = function() {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  this.passwordReset = {
+    token: token,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
+    isUsed: false
+  };
+  return token;
+};
+
+// Verify Password Reset Token
+userSchema.methods.verifyPasswordResetToken = function(inputToken) {
+  if (!this.passwordReset || !this.passwordReset.token) {
+    return { success: false, message: 'No reset token found' };
+  }
+
+  if (this.passwordReset.isUsed) {
+    return { success: false, message: 'Reset token has already been used' };
+  }
+
+  if (new Date() > this.passwordReset.expiresAt) {
+    return { success: false, message: 'Reset token has expired' };
+  }
+
+  if (this.passwordReset.token === inputToken) {
+    return { success: true, message: 'Token verified successfully' };
+  }
+
+  return { success: false, message: 'Invalid reset token' };
+};
+
+// Clear Password Reset Token
+userSchema.methods.clearPasswordReset = function() {
+  this.passwordReset = {
+    token: null,
+    expiresAt: null,
     isUsed: false
   };
 };

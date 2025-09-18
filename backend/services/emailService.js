@@ -322,6 +322,146 @@ class EmailService {
       </html>
     `;
   }
+
+  async sendPasswordResetEmail(email, resetToken, userName) {
+    try {
+      if (!this.transporter) {
+        throw new Error('Email service not initialized');
+      }
+
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+
+      const mailOptions = {
+        from: {
+          name: 'NutriTrack',
+          address: process.env.EMAIL_USER
+        },
+        to: email,
+        subject: 'Reset Your NutriTrack Password',
+        html: this.generatePasswordResetTemplate(resetUrl, userName)
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('Password reset email sent successfully:', result.messageId);
+      return { success: true, messageId: result.messageId };
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  generatePasswordResetTemplate(resetUrl, userName) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset Your NutriTrack Password</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+          }
+          .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #10B981, #3B82F6);
+            border-radius: 50%;
+            margin-bottom: 20px;
+          }
+          h1 {
+            color: #1F2937;
+            margin-bottom: 10px;
+            font-size: 28px;
+          }
+          .reset-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #10B981, #3B82F6);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .warning-box {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #E5E7EB;
+            color: #6B7280;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🔒</div>
+            <h1>Reset Your Password</h1>
+            <p>We received a request to reset your NutriTrack password</p>
+          </div>
+
+          <p>Hi ${userName},</p>
+
+          <p>Someone requested a password reset for your NutriTrack account. If this was you, click the button below to reset your password:</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" class="reset-button">Reset My Password</a>
+          </div>
+
+          <div class="warning-box">
+            <strong>Important:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li>This reset link is valid for <strong>30 minutes</strong> only</li>
+              <li>You can only use this link once</li>
+              <li>If you didn't request this reset, please ignore this email</li>
+              <li>Your password will remain unchanged if you don't click the link</li>
+            </ul>
+          </div>
+
+          <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color: #6B7280; font-size: 14px;">${resetUrl}</p>
+
+          <p>If you didn't request a password reset, please ignore this email or contact our support team if you have concerns.</p>
+
+          <div class="footer">
+            <p>This is an automated message from NutriTrack.<br>
+            Please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} NutriTrack. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
 }
 
 module.exports = new EmailService();
