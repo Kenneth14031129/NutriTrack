@@ -48,12 +48,14 @@ Key guidelines:
 - If medical advice is needed, recommend consulting healthcare professionals
 - Be supportive and motivational
 - Keep responses concise and direct - avoid unnecessary elaboration
+- Do NOT start responses with greetings or the user's name unless they are greeting you first
+- Jump straight into answering their question or providing the requested information
 
 User context: ${this.formatUserContext(userContext)}
 
 User message: ${userMessage}
 
-Please provide a helpful, personalized response as a nutrition coach. Use the user's name if available and reference their specific goals, preferences, and restrictions when relevant:`;
+Please provide a helpful, personalized response as a nutrition coach. Reference their specific goals, preferences, and restrictions when relevant, but avoid unnecessary greetings:`;
 
       const result = await this.model.generateContent(systemPrompt);
       const response = await result.response;
