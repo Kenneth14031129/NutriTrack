@@ -7,6 +7,7 @@ import {
 import Login from "./pages/Login";
 import Coach from "./pages/Coach";
 import MealPlanner from "./pages/MealPlanner";
+import WorkoutPlanner from "./pages/WorkoutPlanner";
 import Scanner from "./pages/Scanner";
 import Homepage from "./pages/Homepage";
 import Profile from "./pages/Profile";
@@ -47,6 +48,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <MealPlanner />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/workout-planner"
+            element={
+              <ProtectedRoute>
+                <WorkoutPlanner />
               </ProtectedRoute>
             }
           />

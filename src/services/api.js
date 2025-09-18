@@ -242,7 +242,83 @@ class ApiService {
       headers: this.getHeaders(),
       body: JSON.stringify({ newDate, newType })
     });
-    
+
+    return this.handleResponse(response);
+  }
+
+  // Workouts
+  async createWorkout(workoutData) {
+    const response = await fetch(`${API_BASE_URL}/workouts`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(workoutData)
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async getTodayWorkouts() {
+    const response = await fetch(`${API_BASE_URL}/workouts/today`, {
+      headers: this.getHeaders()
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async getWorkoutsForDate(date) {
+    const dateString = date.toISOString().split('T')[0];
+    const response = await fetch(`${API_BASE_URL}/workouts/date/${dateString}`, {
+      headers: this.getHeaders()
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async getWeeklyWorkoutPlan(startDate) {
+    const dateString = startDate.toISOString().split('T')[0];
+    const response = await fetch(`${API_BASE_URL}/workouts/week/${dateString}`, {
+      headers: this.getHeaders()
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async updateWorkout(workoutId, workoutData) {
+    const response = await fetch(`${API_BASE_URL}/workouts/${workoutId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(workoutData)
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async deleteWorkout(workoutId) {
+    const response = await fetch(`${API_BASE_URL}/workouts/${workoutId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async updateWorkoutStatus(workoutId, status) {
+    const response = await fetch(`${API_BASE_URL}/workouts/${workoutId}/status`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ status })
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async duplicateWorkout(workoutId, date, type) {
+    const response = await fetch(`${API_BASE_URL}/workouts/${workoutId}/duplicate`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ date, type })
+    });
+
     return this.handleResponse(response);
   }
 

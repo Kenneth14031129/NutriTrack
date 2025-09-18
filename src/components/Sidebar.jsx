@@ -10,6 +10,7 @@ import {
   Home,
   LogOut,
   User,
+  Dumbbell,
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
@@ -30,6 +31,13 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
       label: "Meal Planner",
       icon: ChefHat,
       href: "/meal-planner",
+      badge: null,
+    },
+    {
+      id: "workout-planner",
+      label: "Workout Planner",
+      icon: Dumbbell,
+      href: "/workout-planner",
       badge: null,
     },
   ];
@@ -59,17 +67,6 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
       icon: User,
       href: "/profile",
       badge: null,
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      href: "/settings",
-      badge: null,
-      submenu: [
-        { id: "preferences", label: "Preferences", icon: Settings },
-        { id: "privacy", label: "Privacy", icon: Shield },
-      ],
     },
   ];
 

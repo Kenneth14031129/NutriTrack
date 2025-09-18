@@ -26,10 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nutritrack', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nutritrack')
 .then(() => {
   console.log('✅ Connected to MongoDB');
 })
@@ -44,6 +41,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/goals', require('./routes/goals'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/meals', require('./routes/meals'));
+app.use('/api/workouts', require('./routes/workouts'));
 app.use('/api/foods', require('./routes/foods'));
 app.use('/api/scanner', require('./routes/scanner'));
 app.use('/api/chat', require('./routes/chat'));
