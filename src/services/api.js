@@ -52,13 +52,38 @@ class ApiService {
       headers: this.getHeaders(),
       body: JSON.stringify(credentials)
     });
-    
+
     const data = await this.handleResponse(response);
     if (data.token) {
       this.token = data.token;
       sessionStorage.setItem('authToken', data.token);
     }
     return data;
+  }
+
+  async verifyOTP(otpData) {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(otpData)
+    });
+
+    const data = await this.handleResponse(response);
+    if (data.token) {
+      this.token = data.token;
+      sessionStorage.setItem('authToken', data.token);
+    }
+    return data;
+  }
+
+  async resendOTP(userData) {
+    const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(userData)
+    });
+
+    return this.handleResponse(response);
   }
 
   logout() {

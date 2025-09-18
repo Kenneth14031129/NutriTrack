@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ const generateToken = (userId) => {
 };
 
 // @route   POST /api/auth/register
-// @desc    Register a new user
+// @desc    Register a new user (sends OTP for verification)
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
@@ -24,48 +25,172 @@ router.post('/register', async (req, res) => {
 
     // Validate required fields
     if (!name || !email || !password) {
-      return res.status(400).json({ 
-        message: 'Please provide name, email, and password' 
+      return res.status(400).json({
+        message: 'Please provide name, email, and password'
       });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ 
-        message: 'User already exists with this email' 
+      return res.status(400).json({
+        message: 'User already exists with this email'
       });
     }
 
-    // Create new user
+    // Create new user (unverified)
     const user = new User({
       name: name.trim(),
       email: email.toLowerCase(),
-      password
+      password,
+      isVerified: false
     });
 
+    // Generate OTP
+    const otp = user.generateOTP();
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Send OTP email
+    const emailResult = await emailService.sendOTP(user.email, otp, user.name);
+
+    if (!emailResult.success) {
+      console.error('Failed to send OTP email:', emailResult.error);
+      return res.status(500).json({
+        message: 'Failed to send verification email. Please try again.'
+      });
+    }
 
     res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: user.getPublicProfile()
+      message: 'Registration successful. Please check your email for the verification code.',
+      userId: user._id,
+      email: user.email,
+      requiresVerification: true
     });
 
   } catch (error) {
     console.error('Registration error:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         message: 'Validation error',
         errors: Object.values(error.errors).map(err => err.message)
       });
     }
-    
+
     res.status(500).json({ message: 'Server error during registration' });
+  }
+});
+
+// @route   POST /api/auth/verify-otp
+// @desc    Verify OTP and complete registration
+// @access  Public
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+
+    // Validate required fields
+    if (!userId || !otp) {
+      return res.status(400).json({
+        message: 'Please provide user ID and OTP'
+      });
+    }
+
+    // Find user with OTP data
+    const user = await User.findById(userId).select('+otp.code +otp.expiresAt +otp.attempts +otp.isUsed');
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    // Check if user is already verified
+    if (user.isVerified) {
+      return res.status(400).json({
+        message: 'User is already verified'
+      });
+    }
+
+    // Verify OTP
+    const verificationResult = user.verifyOTP(otp);
+    if (!verificationResult.success) {
+      await user.save(); // Save updated attempt count
+      return res.status(400).json({
+        message: verificationResult.message
+      });
+    }
+
+    // Clear OTP and save user
+    user.clearOTP();
+    await user.save();
+
+    // Send welcome email
+    await emailService.sendWelcomeEmail(user.email, user.name);
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    res.json({
+      message: 'Email verified successfully! Welcome to NutriTrack!',
+      token,
+      user: user.getPublicProfile()
+    });
+
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    res.status(500).json({ message: 'Server error during verification' });
+  }
+});
+
+// @route   POST /api/auth/resend-otp
+// @desc    Resend OTP for email verification
+// @access  Public
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    // Validate required fields
+    if (!userId) {
+      return res.status(400).json({
+        message: 'Please provide user ID'
+      });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    // Check if user is already verified
+    if (user.isVerified) {
+      return res.status(400).json({
+        message: 'User is already verified'
+      });
+    }
+
+    // Generate new OTP
+    const otp = user.generateOTP();
+    await user.save();
+
+    // Send OTP email
+    const emailResult = await emailService.sendOTP(user.email, otp, user.name);
+
+    if (!emailResult.success) {
+      console.error('Failed to send OTP email:', emailResult.error);
+      return res.status(500).json({
+        message: 'Failed to send verification email. Please try again.'
+      });
+    }
+
+    res.json({
+      message: 'Verification code resent successfully. Please check your email.'
+    });
+
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    res.status(500).json({ message: 'Server error while resending OTP' });
   }
 });
 
@@ -98,6 +223,16 @@ router.post('/login', async (req, res) => {
     // Check if account is active
     if (!user.isActive) {
       return res.status(401).json({ message: 'Account is deactivated' });
+    }
+
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(401).json({
+        message: 'Please verify your email address before logging in',
+        requiresVerification: true,
+        userId: user._id,
+        email: user.email
+      });
     }
 
     // Update last login

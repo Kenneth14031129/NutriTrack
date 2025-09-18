@@ -9,6 +9,7 @@ import {
   LogOut,
   User,
   Dumbbell,
+  Leaf,
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
@@ -184,7 +185,7 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
           {/* Logo section */}
           <div className="flex items-center space-x-3 p-6 border-b border-white/20">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">N</span>
+              <Leaf className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">NutriTrack</h1>
@@ -197,7 +198,7 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
             {/* Core Features */}
             <div className="space-y-2">
               <div className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3">
-                🏠 Core Features
+                Core Features
               </div>
               {navigationItems.map((item) => (
                 <NavItem key={item.id} item={item} />
@@ -207,7 +208,7 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
             {/* AI-Powered Features */}
             <div className="mt-8 space-y-2">
               <div className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3">
-                🤖 AI Assistant
+                AI Assistant
               </div>
               {aiItems.map((item) => (
                 <NavItem key={item.id} item={item} />
@@ -217,7 +218,7 @@ const Sidebar = ({ isOpen, onClose, currentPage = "scanner" }) => {
             {/* Settings & Account */}
             <div className="mt-8 space-y-2">
               <div className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3">
-                ⚙️ Account
+                Account
               </div>
               {accountItems.map((item) => (
                 <NavItem key={item.id} item={item} />

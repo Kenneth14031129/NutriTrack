@@ -131,6 +131,28 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+
+  // OTP Verification
+  otp: {
+    code: {
+      type: String,
+      select: false
+    },
+    expiresAt: {
+      type: Date,
+      select: false
+    },
+    attempts: {
+      type: Number,
+      default: 0,
+      select: false
+    },
+    isUsed: {
+      type: Boolean,
+      default: false,
+      select: false
+    }
+  },
   
   // Tracking
   createdAt: {
@@ -205,10 +227,10 @@ userSchema.methods.calculateDailyCalories = function() {
   if (!this.weight?.current || !this.height?.value || !this.age || this.gender === 'prefer-not-to-say') {
     return null;
   }
-  
+
   let weightInKg = this.weight.current;
   let heightInCm = this.height.value;
-  
+
   // Convert to metric if needed
   if (this.weight.unit === 'lbs') {
     weightInKg = weightInKg * 0.453592;
@@ -216,7 +238,7 @@ userSchema.methods.calculateDailyCalories = function() {
   if (this.height.unit === 'ft') {
     heightInCm = heightInCm * 30.48;
   }
-  
+
   // BMR calculation
   let bmr;
   if (this.gender === 'male') {
@@ -224,7 +246,7 @@ userSchema.methods.calculateDailyCalories = function() {
   } else {
     bmr = 10 * weightInKg + 6.25 * heightInCm - 5 * this.age - 161;
   }
-  
+
   // Activity factor
   const activityFactors = {
     'sedentary': 1.2,
@@ -233,8 +255,59 @@ userSchema.methods.calculateDailyCalories = function() {
     'very-active': 1.725,
     'extremely-active': 1.9
   };
-  
+
   return Math.round(bmr * activityFactors[this.activityLevel]);
+};
+
+// Generate OTP
+userSchema.methods.generateOTP = function() {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  this.otp = {
+    code: otp,
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
+    attempts: 0,
+    isUsed: false
+  };
+  return otp;
+};
+
+// Verify OTP
+userSchema.methods.verifyOTP = function(inputOtp) {
+  if (!this.otp || !this.otp.code) {
+    return { success: false, message: 'No OTP found' };
+  }
+
+  if (this.otp.isUsed) {
+    return { success: false, message: 'OTP has already been used' };
+  }
+
+  if (new Date() > this.otp.expiresAt) {
+    return { success: false, message: 'OTP has expired' };
+  }
+
+  if (this.otp.attempts >= 3) {
+    return { success: false, message: 'Maximum OTP attempts exceeded' };
+  }
+
+  this.otp.attempts += 1;
+
+  if (this.otp.code === inputOtp) {
+    this.otp.isUsed = true;
+    this.isVerified = true;
+    return { success: true, message: 'OTP verified successfully' };
+  }
+
+  return { success: false, message: 'Invalid OTP' };
+};
+
+// Clear OTP
+userSchema.methods.clearOTP = function() {
+  this.otp = {
+    code: null,
+    expiresAt: null,
+    attempts: 0,
+    isUsed: false
+  };
 };
 
 module.exports = mongoose.model('User', userSchema);
